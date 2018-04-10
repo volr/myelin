@@ -10,7 +10,13 @@ import Control.Lens hiding ((.=))
 import Control.Monad
 
 import Data.Aeson
+import Data.GraphViz.Types.Generalised
+import Data.GraphViz.Types.Monadic
+import Data.GraphViz.Printing
 import Data.Monoid
+import Data.Text
+import Data.Traversable
+
 
 type Label = String
 
@@ -28,7 +34,7 @@ data NeuronType =
     } deriving (Eq, Show) -- , Typeable, Data, Generic)
 
 if_current_alpha_default :: NeuronType
-if_current_alpha_default = IFCurrentAlpha { 
+if_current_alpha_default = IFCurrentAlpha {
     tau_m = 0.2,
     tau_refrac =  0.3,
     v_thresh = -65.0,
@@ -93,7 +99,7 @@ instance ToJSON Node where
         "label" .= _label,
         "id" .= _id
         ]
-    
+
     toJSON Input {..} = object [
             "type" .= ("input" :: String),
             "file_name" .= _fileName,
@@ -145,15 +151,15 @@ instance ToJSON ProjectionType where
     toJSON OneToOne = object [
         "kind" .= ("one_to_one" :: String)
         ]
-    
-data Edge = 
-      Projection { 
+
+data Edge =
+      Projection {
           _projectionType :: ProjectionType,
           _input :: Node,
           _output :: Node
       } deriving (Eq, Show)
 
-     
+
 instance ToJSON Edge where
     toJSON Projection {..} = object [
                 "type" .= ("projection" :: String),
@@ -166,7 +172,7 @@ instance FromJSON Edge where
     parseJSON = withObject "edge" $ \o -> do
         typ :: String <- o .: "type"
         case typ of
-            "projection" -> 
+            "projection" ->
                 Projection <$>
                     o .: "projection_type" <*>
                     o .: "input" <*>
@@ -213,6 +219,17 @@ fileOutput filename = do
     nodes <>= [output]
     return output
 
+toGraph :: BlockState -> DotGraph String
+toGraph b = digraph (Str "Network") $ do
+    nodes <- forM (_nodes b) $ node' . nodeLabel
+    forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
+    where nodeLabel x = case x of
+                            Population {..} -> "population:id:" ++ _label
+                            Input {..} -> "input:" ++ show _id ++ ":" ++ _fileName
+                            Output {..} -> "output:" ++ show _id ++ ":" ++ _fileName
+
+renderNetwork = renderDot . toDot . toGraph
+
 -- Example API use
 
 net :: SNN ()
@@ -221,17 +238,15 @@ net = do
     output <- fileOutput "out.txt"
     a <- population 10 if_current_alpha_default "a"
     b <- population 20 if_current_alpha_default "b"
-    c <- population 20 if_current_alpha_default "b"
+    c <- population 20 if_current_alpha_default "c"
+    -- 
     projection AllToAll input a
     projection AllToAll a b
     projection AllToAll b c
     projection AllToAll c a
     projection AllToAll c output
 
-netTest = do
-    b <- execStateT net initialBlockState
-    print b
-    return ()
+netTest = execStateT net initialBlockState
 
 
 

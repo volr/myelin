@@ -27,6 +27,8 @@ dependencies:
 - proto-lens
 - transformers
 - aeson
+- text
+- graphviz
 
 library:
   source-dirs: src

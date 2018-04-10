@@ -43,6 +43,8 @@ extra-deps:
 - proto-lens-protoc-0.3.0.0
 - lens-labels-0.2.0.0
 - proto-lens-0.3.0.0
+- graphviz-2999.19.0.0
+- fgl-5.5.4.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

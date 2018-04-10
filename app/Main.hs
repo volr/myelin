@@ -1,6 +1,12 @@
 module Main where
 
-import Myelin.ONNX
+import Data.Text
+import Data.Text.Lazy
+import Data.Text.IO as T
+import Myelin.SNN
 
-main :: IO ()
-main = someFunc
+main = do
+    net <- netTest
+    let dot = renderNetwork net
+    T.putStr $ toStrict dot
+
