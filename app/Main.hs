@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Myelin.ONNX
 
 main :: IO ()
 main = someFunc

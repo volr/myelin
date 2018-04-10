@@ -21,6 +21,12 @@ description:         Please see the README on Github at <https://github.com/cpeh
 
 dependencies:
 - base >= 4.7 && < 5
+- lens
+- bytestring
+- proto-lens-protoc
+- proto-lens
+- transformers
+- aeson
 
 library:
   source-dirs: src
