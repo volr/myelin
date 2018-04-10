@@ -9,10 +9,6 @@ import Control.Monad.Trans.Class
 import Control.Lens hiding ((.=))
 import Control.Monad
 
-{-}
-import Data.Data (Typeable, Data)
-import GHC.Generics (Generic)
--}
 import Data.Aeson
 import Data.Monoid
 
@@ -56,8 +52,7 @@ instance ToJSON NeuronType where
             "v_reset" .= v_reset,
             "tau_syn_I" .= tau_syn_I,
             "i_offset" .= i_offset
-        ]
-    toJSON Other = object [ "type" .= ("Other" :: String)]
+            ]
 
 instance FromJSON NeuronType where
     parseJSON = withObject "neuron" $ \o -> do
@@ -71,7 +66,7 @@ instance FromJSON NeuronType where
         v_reset <- o .: "v_reset"
         tau_syn_I <- o .: "tau_syn_I"
         i_offset <- o .: "i_offset"
-        if (typ == "IFCurrentAlpha") then return IFCurrentAlpha{..} else return Other
+        return IFCurrentAlpha{..}
 
 
 data Node = Population {
@@ -100,16 +95,16 @@ instance ToJSON Node where
         ]
     
     toJSON Input {..} = object [
-        "type" .= ("input" :: String),
-        "file_name" .= _fileName,
-        "id" .= _id,
-    ]
+            "type" .= ("input" :: String),
+            "file_name" .= _fileName,
+            "id" .= _id
+        ]
 
     toJSON Output {..} = object [
-        "type" .= ("output" :: String)
-        "file_name" .= _filenName
-        "id" .= _id,
-    ]
+            "type" .= ("output" :: String),
+            "file_name" .= _fileName,
+            "id" .= _id
+        ]
 
 
 instance FromJSON Node where
@@ -136,24 +131,39 @@ data ProjectionType =
     | OneToOne
     deriving (Eq, Show)
 
+instance FromJSON ProjectionType where
+    parseJSON = withObject"projection_type" $ \o -> do
+        kind :: String <- o .: "kind"
+        case kind of
+            "all_to_all" -> return AllToAll
+            "one_to_one" -> return OneToOne
+
+instance ToJSON ProjectionType where
+    toJSON AllToAll = object [
+        "kind" .= ("all_to_all" :: String)
+        ]
+    toJSON OneToOne = object [
+        "kind" .= ("one_to_one" :: String)
+        ]
+    
 data Edge = 
       Projection { 
-          projection_type :: ProjectionType,
-          input :: Node,
-          output :: Node
+          _projectionType :: ProjectionType,
+          _input :: Node,
+          _output :: Node
       } deriving (Eq, Show)
 
      
 instance ToJSON Edge where
-    toJSON (Projection {..}) = withObject "edge" $ \o -> object [
-        "type" .= ("projection" :: String),
-        "projection_type" .= _projection_type,
-        "input" .= _input,
-        "output" .= _output
-    ]
+    toJSON Projection {..} = object [
+                "type" .= ("projection" :: String),
+                "projection_type" .= toJSON _projectionType,
+                "input" .= _input,
+                "output" .= _output
+            ]
 
 instance FromJSON Edge where
-    parseJSON = withObject "edge" $ \o ->
+    parseJSON = withObject "edge" $ \o -> do
         typ :: String <- o .: "type"
         case typ of
             "projection" -> 
@@ -202,6 +212,8 @@ fileOutput filename = do
     let output = Output filename i
     nodes <>= [output]
     return output
+
+-- Example API use
 
 net :: SNN ()
 net = do
