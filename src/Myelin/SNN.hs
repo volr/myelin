@@ -2,12 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module Myelin.SNN where
 
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Class
 import Control.Lens hiding ((.=))
 import Control.Monad
+import Control.Monad.Trans.Identity
 
 import Data.Aeson
 import Data.GraphViz.Types.Generalised
@@ -17,9 +19,29 @@ import Data.Monoid
 import Data.Text
 import Data.Traversable
 
-
 type Label = String
 
+{--
+
+Things that can be improved:
+
+- Currently none of the parameters have any units,
+  instead their units are indicated by their names
+  
+  - tau_* are time constants
+  - v_* are voltages
+  - i_* are currents
+  - cm is a capacitance
+
+- There is no restriction to "biological" ranges of
+  parameters in place and no check of consistency
+
+- In the case of the Heidelberg Hardware system additionally
+  every neuron on the chip has analog parameter variation,
+  and finite (much coarser than floating point) precision
+  in parameter adjustment.
+
+--}
 data NeuronType =
     IFCurrentAlpha {
         tau_m :: Float,
@@ -31,12 +53,36 @@ data NeuronType =
         v_reset :: Float,
         tau_syn_I :: Float,
         i_offset :: Float
-    } deriving (Eq, Show) -- , Typeable, Data, Generic)
+    } 
+    | IFSpikey {
+        e_rev_I :: Float,
+        g_leak :: Float,
+        tau_refrac :: Float,
+        v_reset :: Float, 
+        v_rest :: Float,
+        v_thresh :: Float
+    }
+    | IFCurrExp {
+        cm :: Float,
+        tau_m :: Float,
+        tau_syn_E :: Float, 
+        tau_refrac :: Float,
+        v_thresh :: Float,
+        v_rest :: Float,
+        v_reset :: Float,
+        i_offset :: Float
+    }
+    deriving (Eq, Show) -- , Typeable, Data, Generic)
 
+{--
+
+
+
+--}
 if_current_alpha_default :: NeuronType
 if_current_alpha_default = IFCurrentAlpha {
     tau_m = 0.2,
-    tau_refrac =  0.3,
+    tau_refrac = 0.3,
     v_thresh = -65.0,
     tau_syn_E =  0.3,
     v_rest = -70.0,
@@ -44,6 +90,28 @@ if_current_alpha_default = IFCurrentAlpha {
     v_reset = -75.0,
     tau_syn_I = 0.9,
     i_offset = 5
+}
+
+if_spikey_default :: NeuronType
+if_spikey_default = IFSpikey {
+    e_rev_I = -80.0,
+    g_leak = 20.0, 
+    tau_refrac = 1.0,
+    v_reset = -80.0, 
+    v_rest = -75.0,
+    v_thresh = -55.0
+}
+
+if_current_exponential_default :: NeuronType
+if_current_exponential_default = IFCurrExp {
+    cm = 250.0, 
+    tau_m = 10.0, 
+    tau_syn_E = 1.0,
+    tau_refrac = 2.0, 
+    v_thresh = 20.0, 
+    v_rest = 0.0,
+    v_reset = 0.0, 
+    i_offset = 0.0
 }
 
 instance ToJSON NeuronType where
@@ -58,22 +126,58 @@ instance ToJSON NeuronType where
             "v_reset" .= v_reset,
             "tau_syn_I" .= tau_syn_I,
             "i_offset" .= i_offset
-            ]
+        ]
+    toJSON IFSpikey {..} = object [
+            "type" .= ("IFSpikey" :: String),
+            "e_rev_I" .= e_rev_I,
+            "g_leak" .= g_leak,
+            "tau_refrac" .= tau_refrac,
+            "v_reset" .= v_reset,
+            "v_rest" .= v_rest,
+            "v_thresh" .= v_thresh
+        ]
+    toJSON IFCurrExp {..} = object [
+            "type" .= ("IFCurrentExp" :: String),
+            "cm" .= cm,
+            "tau_m" .= tau_m,
+            "tau_syn_E" .= tau_syn_E,
+            "tau_refrac" .= tau_refrac,
+            "v_thresh" .= v_thresh,
+            "v_rest" .= v_rest,
+            "v_reset" .= v_reset,
+            "i_offset" .= i_offset
+        ]
 
 instance FromJSON NeuronType where
     parseJSON = withObject "neuron" $ \o -> do
         typ :: String <- o .: "type"
-        tau_m <- o .: "tau_m"
-        tau_refrac <- o .: "tau_refrac"
-        v_thresh <- o .: "v_thresh"
-        tau_syn_E <- o .: "tau_syn_E"
-        v_rest <- o .: "v_rest"
-        cm <- o .: "cm"
-        v_reset <- o .: "v_reset"
-        tau_syn_I <- o .: "tau_syn_I"
-        i_offset <- o .: "i_offset"
-        return IFCurrentAlpha{..}
-
+        case typ of
+            "IFCurrentAlpha" -> IFCurrentAlpha <$>
+                o .: "tau_m" <*>
+                o .: "tau_refrac" <*>
+                o .: "v_thresh" <*>
+                o .: "tau_syn_E" <*>
+                o .: "v_rest" <*>
+                o .: "cm" <*>
+                o .: "v_reset" <*>
+                o .: "tau_syn_I" <*>
+                o .: "i_offset"
+            "IFSpikey" -> IFSpikey <$>
+                o .: "e_rev_I" <*>
+                o .: "g_leak" <*>
+                o .: "tau_refrac" <*>
+                o .: "v_reset" <*>
+                o .: "v_rest" <*>
+                o .: "v_thresh"
+            "IFCurrExp" -> IFCurrExp <$>
+                o .: "cm" <*>
+                o .:"tau_m" <*>
+                o .: "tau_syn_E" <*>
+                o .: "tau_refrac" <*>
+                o .: "v_thresh" <*>
+                o .: "v_rest" <*>
+                o .: "v_reset" <*>
+                o .: "i_offset"
 
 data Node = Population {
         _numNeurons :: Integer,
@@ -89,29 +193,46 @@ data Node = Population {
         _fileName :: String,
         _id :: Int
     }
+    | SpikeSourceArray {
+        _spikeTimes :: [Float],
+        _id :: Int
+    }
+    | SpikeSourcePoisson {        
+        _rate :: Float,
+        _start :: Integer,
+        _id :: Int
+    }
     deriving (Eq, Show) -- , Typeable, Data, Generic)
 
 instance ToJSON Node where
-    toJSON Population {..} = object [
+    toJSON Population{..} = object [
         "type" .= ("population" :: String),
         "num_neurons" .= _numNeurons,
-        "neuron_type" .= toJSON _neuronType,
+        "neuron_type" .= _neuronType,
         "label" .= _label,
         "id" .= _id
         ]
-
-    toJSON Input {..} = object [
+    toJSON Input{..} = object [
             "type" .= ("input" :: String),
             "file_name" .= _fileName,
             "id" .= _id
         ]
-
-    toJSON Output {..} = object [
+    toJSON Output{..} = object [
             "type" .= ("output" :: String),
             "file_name" .= _fileName,
             "id" .= _id
         ]
-
+    toJSON SpikeSourceArray{..} = object [
+            "type" .= ("spike_source_array" :: String),
+            "spike_times" .= _spikeTimes,
+            "id" .= _id
+        ]
+    toJSON SpikeSourcePoisson{..} = object [
+            "type" .= ("spike_source_poisson" :: String),
+            "rate" .= _rate,
+            "start" .= _start,
+            "id" .= _id
+        ]
 
 instance FromJSON Node where
     parseJSON = withObject "node" $ \o -> do
@@ -131,39 +252,115 @@ instance FromJSON Node where
                 Output <$>
                     o .: "file_name" <*>
                     o .: "id"
+            "spike_source_poisson" ->
+                SpikeSourcePoisson <$>
+                    o .: "rate" <*>
+                    o .: "start" <*>
+                    o .: "id"
+            "spike_source_array" ->
+                SpikeSourceArray <$>
+                    o .: "spike_times" <*>
+                    o .: "id"
+            
+type Weight = Float                    
 
 data ProjectionType =
-      AllToAll
-    | OneToOne
+    AllToAll {
+        _weight :: Weight,
+        _allow_self_connections :: Bool
+    }
+    | OneToOne {
+        _weight:: Weight
+    }
+    | FixedNumberPost {
+        _n :: Int,
+        _weight :: Weight,
+        _allow_self_connections :: Bool
+    }
+    | FixedNumberPre {
+        _n :: Int,
+        _weight :: Weight,
+        _allow_self_connections :: Bool
+    }
+    | FromList {
+        _weights :: [(Int, Int, Weight)]
+    }
     deriving (Eq, Show)
 
 instance FromJSON ProjectionType where
-    parseJSON = withObject"projection_type" $ \o -> do
+    parseJSON = withObject "projection_type" $ \o -> do
         kind :: String <- o .: "kind"
         case kind of
-            "all_to_all" -> return AllToAll
-            "one_to_one" -> return OneToOne
+            "all_to_all" -> AllToAll <$> o .: "weight" <*> o .: "allow_self_connections"
+            "one_to_one" -> OneToOne <$> o .: "weight"
+            "fixed_number_pre" -> FixedNumberPre <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
+            "fixed_number_post" -> FixedNumberPost <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections" 
+            "from_list" -> FromList <$> o .: "weights"
 
 instance ToJSON ProjectionType where
-    toJSON AllToAll = object [
-        "kind" .= ("all_to_all" :: String)
+    toJSON AllToAll{..} = object [
+            "kind" .= ("all_to_all" :: String),
+            "weight" .= _weight,
+            "allow_self_connections" .= _allow_self_connections
         ]
-    toJSON OneToOne = object [
-        "kind" .= ("one_to_one" :: String)
+    toJSON OneToOne{..} = object [
+            "kind" .= ("one_to_one" :: String),
+            "weight" .= _weight
         ]
+    toJSON FixedNumberPost{..} = object [
+            "kind" .= ("fixed_number_post" :: String),
+            "n" .= _n,
+            "weight" .= _weight,
+            "allow_self_connections" .= _allow_self_connections
+        ]
+    toJSON FixedNumberPre{..} = object [
+            "kind" .= ("fixed_number_pre" :: String),
+            "n"  .= _n,
+            "weight" .= _weight,
+            "allow_self_connections" .= _allow_self_connections
+        ]
+    toJSON FromList{..} = object [
+            "kind" .= ("from_list" :: String),
+            "weights" .= _weights
+        ]
+
+data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)      
+
+data ProjectionTarget =
+    Static SynapseEffect
+    deriving (Eq, Show)  
+    
+instance ToJSON ProjectionTarget where
+    toJSON (Static Excitatory) = object [ 
+            "kind" .= ("static" :: String),
+            "effect" .= ("excitatory" :: String)
+        ]
+    toJSON (Static Inhibitory) = object [ 
+            "kind" .= ("static" :: String),
+            "effect" .= ("inhibiory" :: String)
+        ]
+
+instance FromJSON ProjectionTarget where
+    parseJSON = withObject "projection_target" $ \o -> do
+            kind :: String <- o .: "kind"
+            effect :: String <- o .: "effect"
+            case effect of
+                "excitatory" -> return (Static Excitatory)
+                "inhibitory" -> return (Static Inhibitory)
 
 data Edge =
       Projection {
           _projectionType :: ProjectionType,
+          _projectionTarget :: ProjectionTarget,
           _input :: Node,
           _output :: Node
       } deriving (Eq, Show)
 
-
 instance ToJSON Edge where
     toJSON Projection {..} = object [
                 "type" .= ("projection" :: String),
-                "projection_type" .= toJSON _projectionType,
+                "projection_type" .= _projectionType,
+                "projection_target" .= _projectionTarget,
                 "input" .= _input,
                 "output" .= _output
             ]
@@ -175,46 +372,124 @@ instance FromJSON Edge where
             "projection" ->
                 Projection <$>
                     o .: "projection_type" <*>
+                    o .: "projectioN_target" <*>
                     o .: "input" <*>
                     o .: "output"
-
 -- Builder
+
+data ExecutionTarget = 
+    Nest
+    | Spikey {
+        _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)       
+    }
+    | SpiNNaker
+    deriving (Eq, Show)
+
+instance ToJSON ExecutionTarget where
+    toJSON Nest = object [ "kind" .= ("nest" :: String)]
+
+instance FromJSON ExecutionTarget where
+    parseJSON = withObject "execution_target" $ \o -> do
+        kind :: String <- o .: "kind"
+        case kind of
+            "nest" -> return Nest
+            _ -> error "target not supported yet"
+
+data Task = Task {
+    _executionTarget :: ExecutionTarget,
+    _network :: Network,
+    _simulationTime :: Double -- TODO: Might be simulator specific, also has no unit
+} deriving (Eq, Show)
+
+instance ToJSON Task where
+    toJSON Task {..} = object [
+            "execution_target" .= _executionTarget,
+            "network" .= _network,
+            "simulation_time" .= _simulationTime
+        ]
+
+instance FromJSON Task where
+    parseJSON = withObject "task" $ \o ->
+        Task <$> o .: "execution_target" <*>
+                 o .: "network" <*>
+                 o .: "simulation_time"
+
+data Network = Network {
+    _blocks :: [BlockState] -- TODO
+} deriving (Eq, Show)
+
+instance ToJSON Network where
+    toJSON Network {..} = object [
+            "blocks" .= _blocks
+        ]
+
+instance FromJSON Network where
+    parseJSON = withObject "network" $ \o ->
+        Network <$> o .: "blocks"
 
 data BlockState = BlockState {
     _nextId :: Int,
     _nodes :: [Node],
     _edges :: [Edge]
-    } deriving (Eq, Show) -- , Typeable, Data, Generic)
+} deriving (Eq, Show) -- , Typeable, Data, Generic)
+
+instance ToJSON BlockState where
+    toJSON BlockState {..} = object [
+            "next_id" .= _nextId,
+            "nodes" .= _nodes,
+            "edges" .= _edges
+        ]
+    
+instance FromJSON BlockState where
+    parseJSON = withObject "block_state" $ \o ->
+        BlockState <$> o .: "next_id" <*> o .: "nodes" <*> o .: "edges"
 
 makeLenses ''BlockState
 
-type SNN a = StateT BlockState IO a
+type SNN a m = StateT BlockState m a
 
 initialBlockState = BlockState 0 [] []
 
-population :: Integer -> NeuronType -> String -> SNN Node
-population i typ label = do
+newId :: Monad m => SNN Int m
+newId = do 
     l <- use nextId
     nextId += 1
+    return l
+
+spikeSourceArray :: Monad m => [Float] -> SNN Node m
+spikeSourceArray spikeTimes = do
+    id <- newId
+    let spikeSource = SpikeSourceArray spikeTimes id
+    nodes <>= [spikeSource]
+    return spikeSource 
+
+spikeSourcePoisson :: Monad m => Float -> Integer -> SNN Node m
+spikeSourcePoisson rate start = do
+    id <- newId
+    let spikeSource = SpikeSourcePoisson rate start id
+    nodes <>= [spikeSource]
+    return spikeSource 
+
+population :: Monad m => Integer -> NeuronType -> String -> SNN Node m
+population i typ label = do
+    l <- newId
     let pop = Population i typ label l
     nodes <>= [pop]
     return pop
 
-projection :: ProjectionType -> Node -> Node -> SNN ()
-projection proj p0 p1 = edges <>= [Projection proj p0 p1]
+projection :: Monad m => ProjectionType -> ProjectionTarget -> Node -> Node -> SNN () m
+projection proj target p0 p1 = edges <>= [Projection proj target p0 p1]
 
-fileInput :: String -> SNN Node
+fileInput :: Monad m => String -> SNN Node m
 fileInput filename = do
-    i <- use nextId
-    nextId += 1
+    i <- newId
     let input = Input filename i
     nodes <>= [input]
     return input
 
-fileOutput :: String -> SNN Node
+fileOutput :: Monad m => String -> SNN Node m
 fileOutput filename = do
-    i <- use nextId
-    nextId += 1
+    i <- newId
     let output = Output filename i
     nodes <>= [output]
     return output
@@ -224,33 +499,41 @@ toGraph b = digraph (Str "Network") $ do
     nodes <- forM (_nodes b) $ node' . nodeLabel
     forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
     where nodeLabel x = case x of
-                            Population {..} -> "population:id:" ++ _label
-                            Input {..} -> "input:" ++ show _id ++ ":" ++ _fileName
-                            Output {..} -> "output:" ++ show _id ++ ":" ++ _fileName
+                            Population{..} -> "population:id:" ++ _label
+                            Input{..} -> "input:" ++ show _id ++ ":" ++ _fileName
+                            Output{..} -> "output:" ++ show _id ++ ":" ++ _fileName
+                            SpikeSourceArray{..} -> "spike_source_array:" ++ show _id
+                            SpikeSourcePoisson{..} -> "spike_source_poisson:" ++ show _id
 
 renderNetwork = renderDot . toDot . toGraph
 
 -- Example API use
 
-net :: SNN ()
+net :: Monad m => SNN () m
 net = do
-    input <- fileInput "in.txt"
+    input <- spikeSourceArray [1, 2, 3, 5]
     output <- fileOutput "out.txt"
-    a <- population 10 if_current_alpha_default "a"
-    b <- population 20 if_current_alpha_default "b"
-    c <- population 20 if_current_alpha_default "c"
-    -- 
-    projection AllToAll input a
-    projection AllToAll a b
-    projection AllToAll b c
-    projection AllToAll c a
-    projection AllToAll c output
+    a <- population 10 if_current_exponential_default "a"
+    b <- population 20 if_current_exponential_default "b" -- TODO: Labels should be checked for doublication
+    c <- population 20 if_current_exponential_default "c"
+    -- TODO: This is kind of ugly now
+    projection (AllToAll 1.0 False) (Static Excitatory) input a
+    projection (AllToAll 1.0 False) (Static Excitatory) a b
+    projection (AllToAll 1.0 False) (Static Excitatory) b c
+    projection (AllToAll 1.0 False) (Static Excitatory) c a
+    -- TODO: inhibitory projection target is not really meaningful
+    -- for output/input
+    projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
-netTest = execStateT net initialBlockState
+netTest :: SNN () Identity
+netTest = net
 
-
-
-
-
-
-
+exampleTask =
+    Task {
+        _executionTarget = Nest,
+        _simulationTime = 100.0,
+        _network = Network {
+            _blocks = [block]
+        }
+    }
+    where (_, block) = runState netTest initialBlockState

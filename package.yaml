@@ -29,6 +29,9 @@ dependencies:
 - aeson
 - text
 - graphviz
+- transformers
+- aeson-pretty
+- bytestring
 
 library:
   source-dirs: src
