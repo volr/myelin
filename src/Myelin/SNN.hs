@@ -12,6 +12,8 @@ import Control.Monad
 import Control.Monad.Trans.Identity
 
 import Data.Aeson
+import Data.Aeson.Encode.Pretty
+import Data.ByteString.Lazy.Char8 as B
 import Data.GraphViz.Types.Generalised
 import Data.GraphViz.Types.Monadic
 import Data.GraphViz.Printing
@@ -538,6 +540,9 @@ toTask model target runtime =
       }
   }
   where (_, block) = runState model initialBlockState
+
+taskToJSON :: Task -> String
+taskToJSON = B.unpack . encodePretty . toJSON
 
 exampleTask =
     Task {
