@@ -32,6 +32,7 @@ dependencies:
 - transformers
 - aeson-pretty
 - bytestring
+- process
 
 library:
   source-dirs: src
@@ -57,3 +58,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - myelin
+    - hspec
