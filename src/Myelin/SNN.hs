@@ -23,6 +23,10 @@ type Label = String
 
 {--
 
+NeuronType corresponds to the different point neuron
+types that are constructible in pynn. Many of them
+are back end specific.
+
 Things that can be improved:
 
 - Currently none of the parameters have any units,
@@ -264,13 +268,32 @@ instance FromJSON Node where
 
 type Weight = Float
 
+{-- 
+
+ProjectionType corresponds to the different connectors available
+in pynn. Some of the connectors are backend specific.
+
+AllToAll, 
+FixedProbability,
+DistanceDependentProbability, 
+FixedNumberPre,
+FixedNumberPost, 
+OneToOne, 
+SmallWorld,
+FromList, 
+FromFile
+
+Not all have them been defined below. In addition there
+are backend specific connectors.
+
+--}
 data ProjectionType =
     AllToAll {
         _weight :: Weight,
         _allow_self_connections :: Bool
     }
     | OneToOne {
-        _weight:: Weight
+        _weight :: Weight
     }
     | FixedNumberPost {
         _n :: Int,
@@ -372,13 +395,16 @@ instance FromJSON Edge where
             "projection" ->
                 Projection <$>
                     o .: "projection_type" <*>
-                    o .: "projectioN_target" <*>
+                    o .: "projection_target" <*>
                     o .: "input" <*>
                     o .: "output"
 -- Builder
 
-data ExecutionTarget =
-    Nest
+data ExecutionTarget = 
+    Nest {
+        _minTimestep :: Float,
+        _maxTimestep :: Float        
+    }
     | Spikey {
         _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
     }
@@ -386,15 +412,23 @@ data ExecutionTarget =
     deriving (Eq, Show)
 
 instance ToJSON ExecutionTarget where
-    toJSON Nest = object [ "kind" .= ("nest" :: String)]
+    toJSON Nest{..} = object [ "kind" .= ("nest" :: String)]
 
 instance FromJSON ExecutionTarget where
     parseJSON = withObject "execution_target" $ \o -> do
         kind :: String <- o .: "kind"
         case kind of
-            "nest" -> return Nest
+            "nest" -> Nest <$> 
+                        o .: "min_timestep" <*>
+                        o .: "max_timestep"
             _ -> error "target not supported yet"
 
+{--
+## Task
+
+An execution task specifies all informationn needed to execute a SNN 
+on a specific target.
+--}
 data Task = Task {
     _executionTarget :: ExecutionTarget,
     _network :: Network,
@@ -415,7 +449,7 @@ instance FromJSON Task where
                  o .: "simulation_time"
 
 data Network = Network {
-    _blocks :: [BlockState] -- TODO
+    _blocks :: [BlockState]
 } deriving (Eq, Show)
 
 instance ToJSON Network where
@@ -429,26 +463,35 @@ instance FromJSON Network where
 
 data BlockState = BlockState {
     _nextId :: Int,
+    _inputs :: [Node],
     _nodes :: [Node],
-    _edges :: [Edge]
+    _edges :: [Edge],
+    _outputs :: [Node]
 } deriving (Eq, Show) -- , Typeable, Data, Generic)
 
 instance ToJSON BlockState where
     toJSON BlockState {..} = object [
             "next_id" .= _nextId,
             "nodes" .= _nodes,
-            "edges" .= _edges
+            "edges" .= _edges,
+            "inputs" .= _inputs,
+            "outputs" .= _outputs
         ]
 
 instance FromJSON BlockState where
     parseJSON = withObject "block_state" $ \o ->
-        BlockState <$> o .: "next_id" <*> o .: "nodes" <*> o .: "edges"
+        BlockState <$> 
+        o .: "next_id" <*> 
+        o .: "nodes" <*> 
+        o .: "edges" <*>
+        o .: "inputs" <*>
+        o .: "outputs"
 
 makeLenses ''BlockState
 
 type SNN a m = StateT BlockState m a
 
-initialBlockState = BlockState 0 [] []
+initialBlockState = BlockState 0 [] [] [] []
 
 newId :: Monad m => SNN Int m
 newId = do
@@ -499,7 +542,7 @@ toGraph b = digraph (Str "Network") $ do
     nodes <- forM (_nodes b) $ node' . nodeLabel
     forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
     where nodeLabel x = case x of
-                            Population{..} -> "population:id:" ++ _label
+                            Population{..} -> "population:id:" ++ show _id ++ ":" ++ _label
                             Input{..} -> "input:" ++ show _id ++ ":" ++ _fileName
                             Output{..} -> "output:" ++ show _id ++ ":" ++ _fileName
                             SpikeSourceArray{..} -> "spike_source_array:" ++ show _id
