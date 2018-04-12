@@ -27,7 +27,7 @@ Things that can be improved:
 
 - Currently none of the parameters have any units,
   instead their units are indicated by their names
-  
+
   - tau_* are time constants
   - v_* are voltages
   - i_* are currents
@@ -53,19 +53,19 @@ data NeuronType =
         v_reset :: Float,
         tau_syn_I :: Float,
         i_offset :: Float
-    } 
+    }
     | IFSpikey {
         e_rev_I :: Float,
         g_leak :: Float,
         tau_refrac :: Float,
-        v_reset :: Float, 
+        v_reset :: Float,
         v_rest :: Float,
         v_thresh :: Float
     }
     | IFCurrExp {
         cm :: Float,
         tau_m :: Float,
-        tau_syn_E :: Float, 
+        tau_syn_E :: Float,
         tau_refrac :: Float,
         v_thresh :: Float,
         v_rest :: Float,
@@ -95,22 +95,22 @@ if_current_alpha_default = IFCurrentAlpha {
 if_spikey_default :: NeuronType
 if_spikey_default = IFSpikey {
     e_rev_I = -80.0,
-    g_leak = 20.0, 
+    g_leak = 20.0,
     tau_refrac = 1.0,
-    v_reset = -80.0, 
+    v_reset = -80.0,
     v_rest = -75.0,
     v_thresh = -55.0
 }
 
 if_current_exponential_default :: NeuronType
 if_current_exponential_default = IFCurrExp {
-    cm = 250.0, 
-    tau_m = 10.0, 
+    cm = 250.0,
+    tau_m = 10.0,
     tau_syn_E = 1.0,
-    tau_refrac = 2.0, 
-    v_thresh = 20.0, 
+    tau_refrac = 2.0,
+    v_thresh = 20.0,
     v_rest = 0.0,
-    v_reset = 0.0, 
+    v_reset = 0.0,
     i_offset = 0.0
 }
 
@@ -197,7 +197,7 @@ data Node = Population {
         _spikeTimes :: [Float],
         _id :: Int
     }
-    | SpikeSourcePoisson {        
+    | SpikeSourcePoisson {
         _rate :: Float,
         _start :: Integer,
         _id :: Int
@@ -261,8 +261,8 @@ instance FromJSON Node where
                 SpikeSourceArray <$>
                     o .: "spike_times" <*>
                     o .: "id"
-            
-type Weight = Float                    
+
+type Weight = Float
 
 data ProjectionType =
     AllToAll {
@@ -294,7 +294,7 @@ instance FromJSON ProjectionType where
             "all_to_all" -> AllToAll <$> o .: "weight" <*> o .: "allow_self_connections"
             "one_to_one" -> OneToOne <$> o .: "weight"
             "fixed_number_pre" -> FixedNumberPre <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
-            "fixed_number_post" -> FixedNumberPost <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections" 
+            "fixed_number_post" -> FixedNumberPost <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
             "from_list" -> FromList <$> o .: "weights"
 
 instance ToJSON ProjectionType where
@@ -324,18 +324,18 @@ instance ToJSON ProjectionType where
             "weights" .= _weights
         ]
 
-data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)      
+data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)
 
 data ProjectionTarget =
     Static SynapseEffect
-    deriving (Eq, Show)  
-    
+    deriving (Eq, Show)
+
 instance ToJSON ProjectionTarget where
-    toJSON (Static Excitatory) = object [ 
+    toJSON (Static Excitatory) = object [
             "kind" .= ("static" :: String),
             "effect" .= ("excitatory" :: String)
         ]
-    toJSON (Static Inhibitory) = object [ 
+    toJSON (Static Inhibitory) = object [
             "kind" .= ("static" :: String),
             "effect" .= ("inhibiory" :: String)
         ]
@@ -377,10 +377,10 @@ instance FromJSON Edge where
                     o .: "output"
 -- Builder
 
-data ExecutionTarget = 
+data ExecutionTarget =
     Nest
     | Spikey {
-        _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)       
+        _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
     }
     | SpiNNaker
     deriving (Eq, Show)
@@ -439,7 +439,7 @@ instance ToJSON BlockState where
             "nodes" .= _nodes,
             "edges" .= _edges
         ]
-    
+
 instance FromJSON BlockState where
     parseJSON = withObject "block_state" $ \o ->
         BlockState <$> o .: "next_id" <*> o .: "nodes" <*> o .: "edges"
@@ -451,7 +451,7 @@ type SNN a m = StateT BlockState m a
 initialBlockState = BlockState 0 [] []
 
 newId :: Monad m => SNN Int m
-newId = do 
+newId = do
     l <- use nextId
     nextId += 1
     return l
@@ -461,14 +461,14 @@ spikeSourceArray spikeTimes = do
     id <- newId
     let spikeSource = SpikeSourceArray spikeTimes id
     nodes <>= [spikeSource]
-    return spikeSource 
+    return spikeSource
 
 spikeSourcePoisson :: Monad m => Float -> Integer -> SNN Node m
 spikeSourcePoisson rate start = do
     id <- newId
     let spikeSource = SpikeSourcePoisson rate start id
     nodes <>= [spikeSource]
-    return spikeSource 
+    return spikeSource
 
 population :: Monad m => Integer -> NeuronType -> String -> SNN Node m
 population i typ label = do
@@ -527,6 +527,17 @@ net = do
 
 netTest :: SNN () Identity
 netTest = net
+
+toTask :: SNN () Identity -> ExecutionTarget -> Double -> Task
+toTask model target runtime =
+  Task {
+      _executionTarget = target,
+      _simulationTime = runtime,
+      _network = Network {
+          _blocks = [block]
+      }
+  }
+  where (_, block) = runState model initialBlockState
 
 exampleTask =
     Task {
