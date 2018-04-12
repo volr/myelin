@@ -1,48 +1,38 @@
-import nest
 import pyNN.nest as pynn
 
 import json
 import sys
 import argparse
 
+recordingPopulation = ""
 
 def create_edge(nodes, edge):
+    global recordingPopulation
     projection_type = edge["projection_type"]["kind"]
-    if (projection_type == "all_to_all"):
-        pynn.Projection(nodes[edge["input"]["id"]],
+    if ("type" in nodes[edge["output"]["id"]] and nodes[edge["output"]["id"]]["type"] == "output"):
+        recordingPopulation = nodes[edge["input"]["id"]]
+    elif (projection_type == "all_to_all"):
+        projection = pynn.Projection(nodes[edge["input"]["id"]],
                         nodes[edge["output"]["id"]],
-                        pynn.AllToAllConnector(),
-                        StaticSynapse(weight = edge["projection_type"]["weight"]))
+                        method=pynn.AllToAllConnector(),
+                        target='excitatory')
+        projection.setWeights(1.0)
     else:
         print "not yet supported"
-            
-    
 
 def create_node(node):
-    kind = node["kind"]
+    kind = node["type"]
     if (kind == "population"):
         neuron = node["neuron_type"]
-        nrn = pynn.IF_curr_exp(
-            cm = neuron["cm"],
-            tau_m = neuron["tau_m"],
-            tau_syn_E = neuron["tau_syn_E"],
-            tau_refrac = neuron["tau_refrac"],
-            v_thresh = neuron["v_thresh"],
-            v_rest = neuron["v_rest"],
-            v_reset = neuron["v_reset"],
-            i_offset = neuron["i_offset"]
-        )
-        nrn.initialize(v=0.0)
-        return pynn.Population(node["num_neurons"], nrn)
+        neuron.pop("type", None) # Remove the 'type' which which is not allowed
+        return pynn.Population(node["num_neurons"], pynn.IF_curr_alpha, cellparams=neuron)
     elif (kind == "spike_source_array"):
-        source_array = pynn.SpikeSourceArray(spike_times = node["spike_times"])
-        return pynn.Population(1, source_array)
+        return pynn.Population(1, pynn.SpikeSourceArray, {'spike_times': node["spike_times"]}, label= 'input')
     elif (kind == "input"):
         print "not yet supported"
         pass
     elif (kind == "output"):
-        print "Not yet supported"
-        pass
+        return node
     elif (kind == "spike_source_poisson"):
         print "Not supported"
         pass
@@ -50,30 +40,39 @@ def create_node(node):
         assert False
 
 def execute(conf):
-    nest.SetKernelStatus({"dict_miss_is_error": False})
+    global recordingPopulation
     # NEST specific stuff
     pynn.setup()
-    
+
     net = conf["network"]
     blocks = net["blocks"]
     # only support one block for now
     b = blocks[0]
 
+    nodes = {}
+
     for node in b["nodes"]:
-        nodes[node["id"]] = create_node(node)              
+        nodes[node["id"]] = create_node(node)
 
     print "----------------------"
 
     for proj in b["edges"]:
         create_edge(nodes, proj)
 
+    recordingPopulation.record()
+    recordingPopulation.record_v()
+
     pynn.run(conf["simulation_time"])
 
-    
-    
+    recordingPopulation.printSpikes("spikes.ras")
+    recordingPopulation.print_v("network.v")
+
+    pynn.end()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='nest pynn executor')
     args = parser.parse_args()
     conf = json.load(sys.stdin)
     assert conf["execution_target"]["kind"] == "nest"
     execute(conf)
+
