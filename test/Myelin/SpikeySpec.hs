@@ -15,3 +15,7 @@ spec = do
     it "can compile to a python script" $ do
       python <- run exampleTask
       (length python) > 0 `shouldBe` True
+
+    it "can convert a task to JSON" $ do
+      let json = taskToJSON exampleTask
+      (length json) > 0 `shouldBe` True
