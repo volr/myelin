@@ -584,7 +584,7 @@ toTask model target runtime =
 
 exampleTask =
     Task {
-        _executionTarget = Nest,
+        _executionTarget = Nest 0.1 0.5,
         _simulationTime = 100.0,
         _network = Network {
             _blocks = [block]
