@@ -6,10 +6,11 @@ import argparse
 
 recordingPopulation = ""
 
-def create_edge(nodes, edge):
+def create_edge(nodes, edge, outputs = {}):
     global recordingPopulation
     projection_type = edge["projection_type"]["kind"]
-    if ("type" in nodes[edge["output"]["id"]] and nodes[edge["output"]["id"]]["type"] == "output"):
+    if (nodes[edge["output"]["id"]]["type"] == "output"):
+        # create a file to record into
         recordingPopulation = nodes[edge["input"]["id"]]
     elif (projection_type == "all_to_all"):
         projection = pynn.Projection(nodes[edge["input"]["id"]],
@@ -24,8 +25,9 @@ def create_node(node):
     kind = node["type"]
     if (kind == "population"):
         neuron = node["neuron_type"]
-        neuron.pop("type", None) # Remove the 'type' which which is not allowed
-        return pynn.Population(node["num_neurons"], pynn.IF_curr_alpha, cellparams=neuron)
+        return pynn.Population(node["num_neurons"], 
+                                pynn.IF_curr_alpha, 
+                                cellparams={k:v for k,v in d.items() if k not in ["type"]})
     elif (kind == "spike_source_array"):
         return pynn.Population(1, pynn.SpikeSourceArray, {'spike_times': node["spike_times"]}, label= 'input')
     elif (kind == "input"):
@@ -50,6 +52,7 @@ def execute(conf):
     b = blocks[0]
 
     nodes = {}
+    outputs = {}
 
     for node in b["nodes"]:
         nodes[node["id"]] = create_node(node)
@@ -57,7 +60,7 @@ def execute(conf):
     print "----------------------"
 
     for proj in b["edges"]:
-        create_edge(nodes, proj)
+        create_edge(nodes, proj, outputs)
 
     recordingPopulation.record()
     recordingPopulation.record_v()

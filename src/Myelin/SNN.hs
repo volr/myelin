@@ -557,7 +557,6 @@ renderNetwork = renderDot . toDot . toGraph
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1, 2, 3, 5]
-    output <- fileOutput "out.txt"
     a <- population 10 if_current_exponential_default "a"
     b <- population 20 if_current_exponential_default "b" -- TODO: Labels should be checked for doublication
     c <- population 20 if_current_exponential_default "c"
@@ -568,6 +567,7 @@ net = do
     projection (AllToAll 1.0 False) (Static Excitatory) c a
     -- TODO: inhibitory projection target is not really meaningful
     -- for output/input
+    output <- fileOutput "out.txt"
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
 netTest :: SNN () Identity
