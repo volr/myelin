@@ -12,4 +12,4 @@ before_install:
 
 cache:
   directories:
-- $HOME/.stack
+  - $HOME/.stack
