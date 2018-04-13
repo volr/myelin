@@ -131,7 +131,6 @@ def execute(model):
     net = model["network"]
     block = net["blocks"][0] # only support one block
     nodes = {}
-
     recordingPopulation = ""
     for node in block["nodes"]:
         n = create_wafer_node(node)
@@ -139,15 +138,11 @@ def execute(model):
         if node["type"] == "population":
             recordingPopulation = n
 
-    recordingSynapse = ""
     for proj in block["edges"]:
-        edge = create_wafer_edge(nodes, proj)
-        if (proj["output"]["type"] == "output"):
-            recordingSynapse = edge
+        create_wafer_edge(nodes, proj)
 
     # Setup recording
     recordingPopulation.record()
-    recordingPopulation.record_v()
     hicann = C.HICANNOnWafer(C.Enum(297))
     marocco.manual_placement.on_hicann(recordingPopulation, hicann)
 
@@ -165,13 +160,8 @@ def execute(model):
     # Full configuration during first step
     marocco.hicann_configurator = PyMarocco.ParallelHICANNv4Configurator
 
-    # Setup synapse to record membrane potential
-    
-
-    # Run actual simulation
     pynn.run(model["simulation_time"])
     np.savetxt("spikes_w.txt", recordingPopulation.getSpikes())
-    np.savetxt("membrane_w.txt", recordingPopulation.get_v())
     pynn.reset()
 
 if __name__ == "__main__":
