@@ -10,14 +10,15 @@ def create_edge(nodes, edge, outputs = {}):
     global recordingPopulation
     projection_type = edge["projection_type"]["kind"]
     if (nodes[edge["output"]["id"]]["type"] == "output"):
-        # create a file to record into
         recordingPopulation = nodes[edge["input"]["id"]]
     elif (projection_type == "all_to_all"):
+        assert(edge['projection_target']['kind'] == 'static') # only support static connectivity for now
+        target = edge['projection_target']['effect']
         projection = pynn.Projection(nodes[edge["input"]["id"]],
                         nodes[edge["output"]["id"]],
                         method=pynn.AllToAllConnector(),
-                        target='excitatory')
-        projection.setWeights(1.0)
+                        target=target)
+        projection.setWeights(edge["weight"])
     else:
         print "not yet supported"
 
@@ -56,9 +57,6 @@ def execute(conf):
 
     for node in b["nodes"]:
         nodes[node["id"]] = create_node(node)
-
-    print "----------------------"
-
     for proj in b["edges"]:
         create_edge(nodes, proj, outputs)
 

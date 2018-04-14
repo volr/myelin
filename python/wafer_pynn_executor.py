@@ -113,11 +113,14 @@ def create_wafer_edge(nodes, edge):
     if ("type" in nodes[edge["output"]["id"]] and nodes[edge["output"]["id"]]["type"] == "output"):
         print("Not wiring output")
     elif  (projection_type == "all_to_all"):
-        connector = pynn.AllToAllConnector(weights=1)
+        connector = pynn.AllToAllConnector(weights=edge["weight"])
+        # only support static connectivity for now
+        assert(edge['projection_target']['kind'] == 'static')
+        target = edge['projection_target']['effect']
         projection = pynn.Projection(nodes[edge["input"]["id"]],
                         nodes[edge["output"]["id"]],
                         connector,
-                        target='excitatory')
+                        target=target)
     else:
         print "not yet supported"
 
@@ -165,8 +168,7 @@ def execute(model):
     pynn.reset()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='spikey pynn executor')
+    parser = argparse.ArgumentParser(description='wafer pynn executor')
     args = parser.parse_args()
     conf = json.load(sys.stdin)
     execute(conf)
-    # print("Hello World.")
