@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--wafer", type=int, default = 21)
     parser.add_argument("--hicann", type=int, default = 320)
     parser.add_argument("--command", type=str, default = None)
-    parser.add_argument("--baese_url", type=string, default = 'https://brainscales-r.kip.uni-heidelberg.de:7443/')
+    parser.add_argument("--baese_url", type=str, default = 'https://brainscales-r.kip.uni-heidelberg.de:7443/')
     parser.add_argument('-i', '--inputs', nargs='+', type=str)    
     args = parser.parse_args()
 
@@ -70,8 +70,8 @@ if __name__ == "__main__":
                                     config=hw_config, 
                                     command=command)
     
-    # each job gets assigned a id, which can be used to track its progress and
-    # fetch any results it produces
+    # Each job gets assigned a id, which can be used to track its progress and
+    # fetch any results it produces.
 
     job_id = job_path.split('/')[-1]
     logger.info("Job {} submitted".format(job_id))
@@ -93,11 +93,12 @@ if __name__ == "__main__":
     # Apache server has a default directory listing page, which can be used
     # to discover all files that have been generated. 
     #
-    # In principle we know all files that will be generated so we could fetch them from
+    # In principle we know all files that will be generated, so we could fetch them from
     #
     # ${base_url}/nmpi/job_${job_id}/$filename
     #
-    # directly.
+    # directly. Here we opt for the lazy method of relying on the specifics of the
+    # Apache directory listing instead.
 
     pattern = '<a href=".*?">(.*?)</a>'
     url = args.base_url + 'nmpi/job_{}/'.format(job_id)
