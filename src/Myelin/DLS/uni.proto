@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package uni;
+
+message UniMessage {
+  enum Type {
+    SETTIME        = 0;
+    WAITUNTIL      = 1;
+    WAITFOR        = 2;
+    FIREONE        = 3;
+    FIREROWS       = 4;
+    HALT           = 5;
+    STOPRECORDING  = 6;
+    STARTRECORDING = 7;
+    WRITE          = 8;
+    READ           = 9;
+  };  
+  message SetTime {
+    uint64 time = 1;
+  };
+  message WaitUntil {
+    uint64 time = 1;
+  };
+  message WaitFor {
+    uint32 time_delta = 1;
+  };
+  message FireRows {
+    fixed32 row_mask = 1;
+    uint32  address = 2;
+  };
+  message FireOne {
+    uint32 row = 1;
+    uint32 address = 2;
+  };
+  message Halt {
+    uint32 dummy = 1;
+  };
+  message StopRecording {
+    fixed32 mask = 1;
+  };
+  message StartRecording {
+    fixed32 mask = 2;
+  };
+  message Write {
+    uint32 address = 1;
+    uint32 data = 2;
+  };
+  message Read {
+    uint32 address = 1;
+  };
+  Type type = 1;
+  WaitFor wait_for = 2;
+  WaitUntil wait_until = 3;
+  FireRows fire_rows = 4;
+  FireOne fire_one = 5;
+  Halt halt = 6;
+  StopRecording stop_recording = 7;
+  StartRecording start_recording = 8;
+  Write write = 9;
+  Read read = 10;
+  SetTime set_time = 11;
+}
+
+message UniMessages {
+  repeated UniMessage uni_message = 1;
+}
