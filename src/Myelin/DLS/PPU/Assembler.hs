@@ -562,12 +562,12 @@ fxvmultachm   rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultachm   cond
 fxvmultacbm   rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultacbm   cond
 fxvmultachfs  rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultachfs  cond
 fxvmultacbfs  rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultacbfs  cond
-fxvinx        rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvinx        cond
+fxvinx        rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvinx        Fxv_cond_null
 fxvpckbu      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbu      cond
-fxvoutx       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvoutx       cond
+fxvoutx       rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvoutx       Fxv_cond_null
 fxvpckbl      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbl      cond
-fxvsplath     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvsplath     cond
-fxvsplatb     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvsplatb     cond
+fxvsplath     rt ra _       = FXV Op_nve_xo rt ra (Register 0) Xop_fxvsplath Fxv_cond_null
+fxvsplatb     rt ra _       = FXV Op_nve_xo rt ra (Register 0) Xop_fxvsplatb Fxv_cond_null
 fxvupckbr     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbr     cond
 fxvupckbl     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbl     cond
 fxvcmph       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmph       cond
@@ -593,8 +593,8 @@ fxvaddhm      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddhm      cond
 fxvaddbm      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddbm      cond
 fxvaddhfs     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddhfs     cond
 fxvaddbfs     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddbfs     cond
-fxvlax        rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvlax        cond
-fxvstax       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvstax       cond
+fxvlax        rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvlax        Fxv_cond_null
+fxvstax       rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvstax       Fxv_cond_null
 
 -- Instruction formats supported by the PPU
 data Inst =
