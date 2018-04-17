@@ -21,9 +21,6 @@ init_logger("WARN", [
     ("sthal", "INFO")
 ])
 
-import pylogging
-logger = pylogging.get("myelin")
-
 def instrument_marocco():
     marocco = PyMarocco()
     marocco.neuron_placement.default_neuron_size(4)
@@ -113,16 +110,23 @@ def create_wafer_edge(nodes, edge):
     if ("type" in nodes[edge["output"]["id"]] and nodes[edge["output"]["id"]]["type"] == "output"):
         print("Not wiring output")
     elif  (projection_type == "all_to_all"):
-        connector = pynn.AllToAllConnector(weights=edge["weight"])
         # only support static connectivity for now
         assert(edge['projection_target']['kind'] == 'static')
-        target = edge['projection_target']['effect']
-        projection = pynn.Projection(nodes[edge["input"]["id"]],
+        connector = pynn.AllToAllConnector(weights=edge["projection_type"]["weight"])
+        target_effect = edge['projection_target']['effect']
+        pynn.Projection(nodes[edge["input"]["id"]],
                         nodes[edge["output"]["id"]],
                         connector,
-                        target=target)
+                        target=str(target_effect))
     else:
         print "not yet supported"
+
+def spikes_to_json(spikes):
+    spiking_neurons = defaultdict(list)
+    for spike in spikes:
+        spiking_neurons[0].append(spike[1])
+
+    return json.dumps(spiking_neurons, separators=(',', ':'))
 
 def execute(model):
     # Create and setup runtime
@@ -164,7 +168,7 @@ def execute(model):
     marocco.hicann_configurator = PyMarocco.ParallelHICANNv4Configurator
 
     pynn.run(model["simulation_time"])
-    np.savetxt("spikes_w.txt", recordingPopulation.getSpikes())
+    print(spikes_to_json(recordingPopulation.getSpikes()))
     pynn.reset()
 
 if __name__ == "__main__":
