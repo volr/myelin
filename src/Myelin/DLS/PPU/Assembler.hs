@@ -8,6 +8,39 @@ import Data.Bits
 data Register = Register Word32 deriving (Eq, Show)
 encodeRegister (Register r) = r
 
+r0 = Register 0
+r1 = Register 1
+r2 = Register 2
+r3 = Register 3
+r4 = Register 4
+r5 = Register 5
+r6 = Register 6
+r7 = Register 7
+r8 = Register 8
+r9 = Register 9
+r10 = Register 10
+r11 = Register 11
+r12 = Register 12 
+r13 = Register 13 
+r14 = Register 14
+r15 = Register 15
+r16 = Register 16
+r17 = Register 17
+r18 = Register 18
+r19 = Register 19
+r20 = Register 20
+r21 = Register 21
+r22 = Register 22
+r23 = Register 23
+r24 = Register 24
+r25 = Register 25
+r26 = Register 26
+r27 = Register 27
+r28 = Register 28 
+r29 = Register 29 
+r30 = Register 30
+r31 = Register 31
+
 data SpecialPurposeRegister = SpecialPurposeRegister Word32 deriving (Eq, Show)
 encodeSpecialPurposeRegister (SpecialPurposeRegister r) = r
 
@@ -674,9 +707,9 @@ data Inst =
 encode :: Inst -> Word32
 encode inst = case inst of
     I {..} -> (opcode _opcd) 
-                .|. (_li `shift` 6) 
-                .|. (if _aa then 1 `shift` 30 else 0) 
-                .|. (if _lk then 1 `shift` 31 else 0)
+          .|. (_li `shift` 6) 
+          .|. (if _aa then 1 `shift` 30 else 0) 
+          .|. (if _lk then 1 `shift` 31 else 0)
     B {..} -> (opcode _opcd) 
           .|. (encodeRegister _bo `shift` 6) 
           .|. (encodeRegister _bi `shift` 11)
