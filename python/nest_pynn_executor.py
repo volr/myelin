@@ -1,11 +1,12 @@
 import pyNN.nest as pynn
 
+from collections import defaultdict
 import json
 import sys
 import argparse
 
-import logging
-logging.basicConfig()
+from pyNN.utility import init_logging
+init_logging("logfile", debug=True)
 
 recordingPopulation = ""
 
@@ -45,6 +46,13 @@ def create_node(node):
     else:
         assert False
 
+def spikes_to_json(spikes):
+    spiking_neurons = defaultdict(list)
+    for spike in spikes:
+        spiking_neurons[0].append(spike[1])
+
+    return json.dumps(spiking_neurons, separators=(',', ':'))
+
 def execute(conf):
     global recordingPopulation
     # NEST specific stuff
@@ -64,12 +72,10 @@ def execute(conf):
         create_edge(nodes, proj, outputs)
 
     recordingPopulation.record()
-    recordingPopulation.record_v()
 
     pynn.run(conf["simulation_time"])
 
-    recordingPopulation.printSpikes("spikes.ras")
-    recordingPopulation.print_v("network.v")
+    print(spikes_to_json(recordingPopulation.getSpikes()))
 
     pynn.end()
 
