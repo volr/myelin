@@ -466,6 +466,10 @@ data ExecutionTarget =
         _minTimestep :: Float,
         _maxTimestep :: Float
     }
+    | BrainScaleS {
+        _wafer :: Int,
+        _hicann :: Int
+    }
     | Spikey {
         _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
     }
@@ -474,11 +478,19 @@ data ExecutionTarget =
 
 instance ToJSON ExecutionTarget where
     toJSON Nest{..} = object [ "kind" .= ("nest" :: String)]
+    toJSON BrainScaleS{..} = object
+      [ "kind" .= ("brainscales" :: String)
+      , "wafer" .= _wafer
+      , "hicann" .= _hicann
+      ]
 
 instance FromJSON ExecutionTarget where
     parseJSON = withObject "execution_target" $ \o -> do
         kind :: String <- o .: "kind"
         case kind of
+            "brainscales" -> BrainScaleS <$>
+                        o .: "wafer" <*>
+                        o .: "hicann"
             "nest" -> Nest <$>
                         o .: "min_timestep" <*>
                         o .: "max_timestep"
