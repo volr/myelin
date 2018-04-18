@@ -27,14 +27,14 @@ def execute(conf):
         create_spikey_edge(nodes, proj)
 
 
-
+"""
 i = 0
 for pop in cfg.populations:
     population[i] = pynn.Population(dims = pop.dimensions,
                                     cellclass = pynn.IF_facets_hardware1(parameters = pop.parameters),
                                     label = pop.label)
     i = i + 1
-"""
+
 # All possible connector types of the spikey are:
 #
 # connector = pynn.AllToAllConnector(allow_self_connections = True, weights = 1.0)
@@ -72,10 +72,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='spikey pynn executor')
     args = parser.parse_args()
     conf = json.load(sys.stdin)
-<<<<<<< Updated upstream
     print(conf)
-    # print("Hello World.")
-=======
-    execute(conf)
-    print conf
->>>>>>> Stashed changes
