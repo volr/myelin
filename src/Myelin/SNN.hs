@@ -72,12 +72,26 @@ data NeuronType =
         cm :: Float,
         tau_m :: Float,
         tau_syn_E :: Float,
+        tau_syn_I :: Float,
         tau_refrac :: Float,
         v_thresh :: Float,
         v_rest :: Float,
         v_reset :: Float,
         i_offset :: Float
     }
+    | IFCondExp
+      { v_rest :: Float
+      , cm :: Float
+      , tau_m :: Float
+      , tau_refrac :: Float
+      , tau_syn_E :: Float
+      , tau_syn_I :: Float
+      , e_rev_E :: Float
+      , e_rev_I :: Float
+      , v_thresh :: Float
+      , v_reset :: Float
+      , i_offset :: Float
+      }
     deriving (Eq, Show) -- , Typeable, Data, Generic)
 
 {--
@@ -85,17 +99,33 @@ data NeuronType =
 
 
 --}
+-- Defaults pulled from http://neuralensemble.org/docs/PyNN/standardmodels.html
+if_cond_exp_default :: NeuronType
+if_cond_exp_default = IFCondExp
+  { v_rest = -65.0
+  , cm = 1.0
+  , tau_m = 20.0
+  , tau_refrac = 0.0
+  , tau_syn_E = 5.0
+  , tau_syn_I = 5.0
+  , e_rev_E = 0.0
+  , e_rev_I = -70.0
+  , v_thresh = -50.0
+  , v_reset = -65.0
+  , i_offset = 0.0
+  }
+
 if_current_alpha_default :: NeuronType
 if_current_alpha_default = IFCurrentAlpha {
-    tau_m = 0.2,
-    tau_refrac = 0.3,
+    tau_m = 20.0,
+    tau_refrac = 0.0,
     v_thresh = -65.0,
-    tau_syn_E =  0.3,
-    v_rest = -70.0,
+    tau_syn_E =  5.0,
+    tau_syn_I = 5.0,
+    v_rest = -65.0,
     cm = 1.0,
-    v_reset = -75.0,
-    tau_syn_I = 0.9,
-    i_offset = 5
+    v_reset = -65.0,
+    i_offset = 0.0
 }
 
 if_spikey_default :: NeuronType
@@ -110,17 +140,32 @@ if_spikey_default = IFSpikey {
 
 if_current_exponential_default :: NeuronType
 if_current_exponential_default = IFCurrExp {
-    cm = 250.0,
+    cm = 1.0,
     tau_m = 10.0,
-    tau_syn_E = 1.0,
+    tau_syn_E = 5.0,
+    tau_syn_I = 5.0,
     tau_refrac = 2.0,
-    v_thresh = 20.0,
-    v_rest = 0.0,
+    v_thresh = -50.0,
+    v_rest = -65.0,
     v_reset = 0.0,
     i_offset = 0.0
 }
 
 instance ToJSON NeuronType where
+    toJSON IFCondExp {..} = object [
+            "type" .= ("IFCondExp" :: String),
+            "tau_m" .= tau_m,
+            "tau_refrac" .= tau_refrac,
+            "v_thresh" .= v_thresh,
+            "tau_syn_E" .= tau_syn_E,
+            "v_rest" .= v_rest,
+            "cm" .= cm,
+            "v_reset" .= v_reset,
+            "tau_syn_I" .= tau_syn_I,
+            "i_offset" .= i_offset,
+            "e_rev_E" .= e_rev_E,
+            "e_rev_I" .= e_rev_I
+        ]
     toJSON IFCurrentAlpha {..} = object [
             "type" .= ("IFCurrentAlpha" :: String),
             "tau_m" .= tau_m,
@@ -147,6 +192,7 @@ instance ToJSON NeuronType where
             "cm" .= cm,
             "tau_m" .= tau_m,
             "tau_syn_E" .= tau_syn_E,
+            "tau_syn_I" .= tau_syn_I,
             "tau_refrac" .= tau_refrac,
             "v_thresh" .= v_thresh,
             "v_rest" .= v_rest,
@@ -158,6 +204,18 @@ instance FromJSON NeuronType where
     parseJSON = withObject "neuron" $ \o -> do
         typ :: String <- o .: "type"
         case typ of
+            "IFCondExp" -> IFCondExp <$>
+                o .: "v_rest" <*>
+                o .: "cm" <*>
+                o .: "tau_m" <*>
+                o .: "tau_refrac" <*>
+                o .: "tau_syn_E" <*>
+                o .: "tau_syn_I" <*>
+                o .: "e_rev_E" <*>
+                o .: "e_rev_I" <*>
+                o .: "v_thresh" <*>
+                o .: "v_reset" <*>
+                o .: "i_offset"
             "IFCurrentAlpha" -> IFCurrentAlpha <$>
                 o .: "tau_m" <*>
                 o .: "tau_refrac" <*>
@@ -179,6 +237,7 @@ instance FromJSON NeuronType where
                 o .: "cm" <*>
                 o .:"tau_m" <*>
                 o .: "tau_syn_E" <*>
+                o .: "tau_syn_I" <*>
                 o .: "tau_refrac" <*>
                 o .: "v_thresh" <*>
                 o .: "v_rest" <*>
@@ -270,19 +329,19 @@ instance FromJSON Node where
 
 type Weight = Float
 
-{-- 
+{--
 
 ProjectionType corresponds to the different connectors available
 in pynn. Some of the connectors are backend specific.
 
-AllToAll, 
+AllToAll,
 FixedProbability,
-DistanceDependentProbability, 
+DistanceDependentProbability,
 FixedNumberPre,
-FixedNumberPost, 
-OneToOne, 
+FixedNumberPost,
+OneToOne,
 SmallWorld,
-FromList, 
+FromList,
 FromFile
 
 Not all have them been defined below. In addition there
@@ -402,10 +461,10 @@ instance FromJSON Edge where
                     o .: "output"
 -- Builder
 
-data ExecutionTarget = 
+data ExecutionTarget =
     Nest {
         _minTimestep :: Float,
-        _maxTimestep :: Float        
+        _maxTimestep :: Float
     }
     | Spikey {
         _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
@@ -420,7 +479,7 @@ instance FromJSON ExecutionTarget where
     parseJSON = withObject "execution_target" $ \o -> do
         kind :: String <- o .: "kind"
         case kind of
-            "nest" -> Nest <$> 
+            "nest" -> Nest <$>
                         o .: "min_timestep" <*>
                         o .: "max_timestep"
             _ -> error "target not supported yet"
@@ -428,7 +487,7 @@ instance FromJSON ExecutionTarget where
 {--
 ## Task
 
-An execution task specifies all informationn needed to execute a SNN 
+An execution task specifies all informationn needed to execute a SNN
 on a specific target.
 --}
 data Task = Task {
@@ -482,9 +541,9 @@ instance ToJSON BlockState where
 
 instance FromJSON BlockState where
     parseJSON = withObject "block_state" $ \o ->
-        BlockState <$> 
-        o .: "next_id" <*> 
-        o .: "nodes" <*> 
+        BlockState <$>
+        o .: "next_id" <*>
+        o .: "nodes" <*>
         o .: "edges" <*>
         o .: "inputs" <*>
         o .: "outputs"
