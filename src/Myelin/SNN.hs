@@ -424,7 +424,7 @@ instance ToJSON ProjectionTarget where
         ]
     toJSON (Static Inhibitory) = object [
             "kind" .= ("static" :: String),
-            "effect" .= ("inhibiory" :: String)
+            "effect" .= ("inhibitory" :: String)
         ]
 
 instance FromJSON ProjectionTarget where
