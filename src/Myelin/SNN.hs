@@ -248,7 +248,8 @@ data Node = Population {
         _numNeurons :: Integer,
         _neuronType :: NeuronType,
         _label :: Label,
-        _id :: Int
+        _id :: Int,
+        _record_spikes :: Bool
     }
     | Input {
         _fileName :: String,
@@ -275,7 +276,8 @@ instance ToJSON Node where
         "num_neurons" .= _numNeurons,
         "neuron_type" .= _neuronType,
         "label" .= _label,
-        "id" .= _id
+        "id" .= _id,
+        "record_spikes" .= _record_spikes
         ]
     toJSON Input{..} = object [
             "type" .= ("input" :: String),
@@ -308,7 +310,8 @@ instance FromJSON Node where
                     o .: "num_neurons" <*>
                     o .: "neuron_type" <*>
                     o .: "label" <*>
-                    o .: "id"
+                    o .: "id" <*>
+                    o .: "record_spikes"
             "input" ->
                 Input <$>
                     o .: "file_name" <*>
@@ -586,10 +589,10 @@ spikeSourcePoisson rate start = do
     nodes <>= [spikeSource]
     return spikeSource
 
-population :: Monad m => Integer -> NeuronType -> String -> SNN Node m
-population i typ label = do
+population :: Monad m => Integer -> NeuronType -> String -> Bool -> SNN Node m
+population i typ label recordSpikes = do
     l <- newId
-    let pop = Population i typ label l
+    let pop = Population i typ label l recordSpikes
     nodes <>= [pop]
     return pop
 
@@ -628,9 +631,9 @@ renderNetwork = renderDot . toDot . toGraph
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1, 2, 3, 5]
-    a <- population 10 if_current_exponential_default "a"
-    b <- population 20 if_current_exponential_default "b" -- TODO: Labels should be checked for doublication
-    c <- population 20 if_current_exponential_default "c"
+    a <- population 10 if_current_exponential_default "a" False
+    b <- population 20 if_current_exponential_default "b" False -- TODO: Labels should be checked for doublication
+    c <- population 20 if_current_exponential_default "c" False
     -- TODO: This is kind of ugly now
     projection (AllToAll 1.0 False) (Static Excitatory) input a
     projection (AllToAll 1.0 False) (Static Excitatory) a b
