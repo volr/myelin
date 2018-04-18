@@ -1,3 +1,5 @@
+
+from collections import defaultdict
 import json
 import sys
 import argparse
@@ -16,8 +18,8 @@ from pymarocco.results import Marocco
 
 init_logger("WARN", [
     ("guidebook", "DEBUG"),
-    ("marocco", "DEBUG"),
-    ("Calibtic", "DEBUG"),
+    ("marocco", "INFO"),
+    ("Calibtic", "INFO"),
     ("sthal", "INFO")
 ])
 
@@ -124,9 +126,9 @@ def create_wafer_edge(nodes, edge):
 def spikes_to_json(spikes):
     spiking_neurons = defaultdict(list)
     for spike in spikes:
-        spiking_neurons[0].append(spike[1])
+        spiking_neurons[int(spike[0])].append(spike[1])
 
-    return json.dumps(spiking_neurons, separators=(',', ':'))
+    return json.dumps(spiking_neurons.values(), separators=(',', ':'))
 
 def execute(model):
     # Create and setup runtime
@@ -139,11 +141,14 @@ def execute(model):
     block = net["blocks"][0] # only support one block
     nodes = {}
     recordingPopulation = ""
+    stimulus = ""
     for node in block["nodes"]:
         n = create_wafer_node(node)
         nodes[node["id"]] = n
         if node["type"] == "population":
             recordingPopulation = n
+        elif node["type"] == "spike_source_array":
+            stimulus = n
 
     for proj in block["edges"]:
         create_wafer_edge(nodes, proj)
@@ -151,6 +156,7 @@ def execute(model):
     # Setup recording
     recordingPopulation.record()
     hicann = C.HICANNOnWafer(C.Enum(297))
+    marocco.manual_placement.on_hicann(stimulus, hicann)
     marocco.manual_placement.on_hicann(recordingPopulation, hicann)
 
     # Run mapping

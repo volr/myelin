@@ -8,8 +8,8 @@ pynn.setup(mapping_offset = cfg.mapping_offset)
 
 i = 0
 for pop in cfg.populations:
-    population[i] = pynn.Population(dims = pop.dimensions, 
-                                    cellclass = pynn.IF_facets_hardware1(parameters = pop.parameters), 
+    population[i] = pynn.Population(dims = pop.dimensions,
+                                    cellclass = pynn.IF_facets_hardware1(parameters = pop.parameters),
                                     label = pop.label)
     i = i + 1
 
@@ -22,19 +22,19 @@ for pop in cfg.populations:
 # connector = pynn.OneToOneConnector(weights = 1.0, delays = None)
 
 # All possible spike sources are:
-# 
+#
 # sources = pynn.SpikeSourceArray(parameters = {'spike_times': [1, 10, 20]})
 # sources = pynn.SpikeSourcePoisson(parameters = {'duration': 1000., 'rate': 1.0, 'start': 0.0})
 
 # Record from a specific population
-# 
-# pop.record() 
+#
+# pop.record()
 
 # pynn.minExcWeight
 # pynn.maxExcWeight
 
 
-for proj in cfg.projections:    
+for proj in cfg.projections:
     pynn.Projection(
         presynaptic_population = populations[proj.presynaptic_population.idx],
         postsynaptic_population = populations[proj.postsynaptic_population.idx],
@@ -50,5 +50,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='spikey pynn executor')
     args = parser.parse_args()
     conf = json.load(sys.stdin)
-    print conf
+    print(conf)
     # print("Hello World.")
