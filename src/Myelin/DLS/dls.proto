@@ -138,7 +138,6 @@ message ChipConfig {
     };
     message CapacitiveMemoryRow {
       uint32 row = 1;
-      string name = 2;
       repeated uint32 value = 3;
     };
     Config config = 1;

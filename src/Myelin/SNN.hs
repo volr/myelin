@@ -23,7 +23,7 @@ import Data.Traversable
 
 type Label = String
 
-{--
+{--| 
 
 NeuronType corresponds to the different point neuron
 types that are constructible in pynn. Many of them
@@ -50,23 +50,23 @@ Things that can be improved:
 --}
 data NeuronType =
     IFCurrentAlpha {
-        tau_m :: Float,
-        tau_refrac :: Float,
-        v_thresh :: Float,
-        tau_syn_E :: Float,
-        v_rest :: Float,
-        cm :: Float,
-        v_reset :: Float,
-        tau_syn_I :: Float,
-        i_offset :: Float
+        tau_m :: Float, -- ^ Membrane time constant  
+        tau_refrac :: Float, -- ^ Refractory time
+        v_thresh :: Float, -- ^ Threshhold potential
+        tau_syn_E :: Float, -- ^ Excitatory synaptic time constant
+        v_rest :: Float, -- ^ Resting potential
+        cm :: Float, -- ^ Membrane capactitance
+        v_reset :: Float, -- ^ Reset potential 
+        tau_syn_I :: Float, -- ^ Inhibitory synaptic time constant
+        i_offset :: Float -- ^ Offset current
     }
     | IFSpikey {
-        e_rev_I :: Float,
-        g_leak :: Float,
-        tau_refrac :: Float,
-        v_reset :: Float,
-        v_rest :: Float,
-        v_thresh :: Float
+        e_rev_I :: Float, -- ^ Excitatory reversal current
+        g_leak :: Float, -- ^ Leak conductance
+        tau_refrac :: Float, -- ^ Refractory time
+        v_reset :: Float, -- ^ Reset potential
+        v_rest :: Float, -- ^ Resting potential
+        v_thresh :: Float -- ^ Threshhold potential
     }
     | IFCurrExp {
         cm :: Float,
@@ -94,11 +94,6 @@ data NeuronType =
       }
     deriving (Eq, Show) -- , Typeable, Data, Generic)
 
-{--
-
-
-
---}
 -- Defaults pulled from http://neuralensemble.org/docs/PyNN/standardmodels.html
 if_cond_exp_default :: NeuronType
 if_cond_exp_default = IFCondExp
@@ -243,7 +238,11 @@ instance FromJSON NeuronType where
                 o .: "v_rest" <*>
                 o .: "v_reset" <*>
                 o .: "i_offset"
+{-- | 
 
+Nodes correspond to the 
+
+--}
 data Node = Population {
         _numNeurons :: Integer,
         _neuronType :: NeuronType,
@@ -330,7 +329,7 @@ instance FromJSON Node where
                     o .: "spike_times" <*>
                     o .: "id"
 
-type Weight = Float
+type Weight = Float -- TODO: This is platform specific
 
 {--
 
@@ -348,7 +347,7 @@ FromList,
 FromFile
 
 Not all have them been defined below. In addition there
-are backend specific connectors.
+are backend specific connectors. 
 
 --}
 data ProjectionType =
@@ -500,14 +499,12 @@ instance FromJSON ExecutionTarget where
             _ -> error "target not supported yet"
 
 {--
-## Task
-
-An execution task specifies all informationn needed to execute a SNN
+An execution task specifies all informationn needed to execute a SNN 
 on a specific target.
 --}
 data Task = Task {
-    _executionTarget :: ExecutionTarget,
-    _network :: Network,
+    _executionTarget :: ExecutionTarget, -- ^ Which neuromorphic hardware or simulator to run on.
+    _network :: Network, -- ^ Network that should be implemented.
     _simulationTime :: Double -- TODO: Might be simulator specific, also has no unit
 } deriving (Eq, Show)
 
@@ -613,20 +610,8 @@ fileOutput filename = do
     nodes <>= [output]
     return output
 
-toGraph :: BlockState -> DotGraph String
-toGraph b = digraph (Str "Network") $ do
-    nodes <- forM (_nodes b) $ node' . nodeLabel
-    forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
-    where nodeLabel x = case x of
-                            Population{..} -> "population:id:" ++ show _id ++ ":" ++ _label
-                            Input{..} -> "input:" ++ show _id ++ ":" ++ _fileName
-                            Output{..} -> "output:" ++ show _id ++ ":" ++ _fileName
-                            SpikeSourceArray{..} -> "spike_source_array:" ++ show _id
-                            SpikeSourcePoisson{..} -> "spike_source_poisson:" ++ show _id
-
-renderNetwork = renderDot . toDot . toGraph
-
 -- Example API use
+
 
 net :: Monad m => SNN () m
 net = do
