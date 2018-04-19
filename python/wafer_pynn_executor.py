@@ -23,7 +23,12 @@ init_logger("WARN", [
     ("sthal", "INFO")
 ])
 
-def instrument_marocco():
+def instrument_marocco(execution_target):
+    if "wafer" in execution_target:
+        wafer = execution_target["wafer"]
+    else:
+        wafer = 37 # TODO: Define default wafer in Myelin
+
     marocco = PyMarocco()
     marocco.neuron_placement.default_neuron_size(4)
     marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
@@ -36,7 +41,7 @@ def instrument_marocco():
     marocco.calib_backend = PyMarocco.XML
     marocco.defects.path = marocco.calib_path = "/wang/data/calibration/brainscales/default-2017-09-26-1"
     marocco.defects.backend = Defects.XML
-    marocco.default_wafer = C.Wafer(int(os.environ.get("WAFER", 21)))
+    marocco.default_wafer = C.Wafer(int(os.environ.get("WAFER", wafer)))
     marocco.param_trafo.use_big_capacitors = True
     marocco.input_placement.consider_firing_rate(True)
     marocco.input_placement.bandwidth_utilization(0.8)
@@ -79,7 +84,7 @@ def set_sthal_params(wafer, gmax, gmax_div):
             fgs.setShared(block, HICANN.shared_parameter.V_dllres, 275)
             fgs.setShared(block, HICANN.shared_parameter.V_ccas, 800)
 
-def create_wafer_node(node):
+def create_wafer_node(node, marocco):
     kind = node["type"]
     if (kind == "population"):
         neuron = node["neuron_type"]
@@ -107,7 +112,7 @@ def create_wafer_node(node):
     else:
         assert False
 
-def create_wafer_edge(nodes, edge):
+def create_wafer_edge(nodes, edge, marocco):
     projection_type = edge["projection_type"]["kind"]
     if ("type" in nodes[edge["output"]["id"]] and nodes[edge["output"]["id"]]["type"] == "output"):
         print("Not wiring output")
@@ -128,36 +133,46 @@ def spikes_to_json(spikes):
     for spike in spikes:
         spiking_neurons[int(spike[0])].append(spike[1])
 
-    return json.dumps(spiking_neurons.values(), separators=(',', ':'))
+    return spiking_neurons.values()
 
 def execute(model):
     # Create and setup runtime
-    marocco = instrument_marocco()
+    execution_target = model["execution_target"]
+    marocco = instrument_marocco(execution_target)
     runtime = Runtime(marocco.default_wafer)
+
+    if "hicann" in execution_target:
+        hicann = C.HICANNOnWafer(C.Enum(execution_target["hicann"]))
+    else:
+        hicann = C.HICANNOnWafer(C.Enum(297))
+
     pynn.setup(marocco=marocco, marocco_runtime=runtime)
 
     # Build network
     net = model["network"]
     block = net["blocks"][0] # only support one block
     nodes = {}
-    recordingPopulation = ""
+    outputs = {}
     stimulus = ""
+
+    # Create nodes
     for node in block["nodes"]:
-        n = create_wafer_node(node)
+        n = create_wafer_node(node, marocco)
         nodes[node["id"]] = n
-        if node["type"] == "population":
-            recordingPopulation = n
+        if node["type"] == "population" and node["record_spikes"]:
+            outputs[node["label"]] = nodes[node["id"]]
         elif node["type"] == "spike_source_array":
             stimulus = n
 
+        if node["type"] == "population" or node["type"] == "spike_source_array":
+            marocco.manual_placement.on_hicann(n, hicann)
+
     for proj in block["edges"]:
-        create_wafer_edge(nodes, proj)
+        create_wafer_edge(nodes, proj, marocco)
 
     # Setup recording
-    recordingPopulation.record()
-    hicann = C.HICANNOnWafer(C.Enum(297))
-    marocco.manual_placement.on_hicann(stimulus, hicann)
-    marocco.manual_placement.on_hicann(recordingPopulation, hicann)
+    for label in outputs:
+        outputs[label].record()
 
     # Run mapping
     marocco.skip_mapping = False
@@ -174,11 +189,17 @@ def execute(model):
     marocco.hicann_configurator = PyMarocco.ParallelHICANNv4Configurator
 
     pynn.run(model["simulation_time"])
-    print(spikes_to_json(recordingPopulation.getSpikes()))
+
+    # Extract spikes
+    for label in outputs:
+        outputs[label] = spikes_to_json(outputs[label].getSpikes())
     pynn.reset()
+
+    return json.dumps(outputs, separators=(',', ':'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='wafer pynn executor')
     args = parser.parse_args()
     conf = json.load(sys.stdin)
-    execute(conf)
+    result = execute(conf)
+    print(result)

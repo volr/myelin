@@ -10,21 +10,21 @@ import sys
 from pyNN.utility import init_logging
 init_logging("logfile", debug=False)
 
-recordingPopulation = ""
 
-def create_edge(nodes, edge, outputs = {}):
-    global recordingPopulation
+def create_edge(nodes, edge):
     projection_type = edge["projection_type"]["kind"]
-    if ((not isinstance(nodes[edge["output"]["id"]], pynn.Population)) and nodes[edge["output"]["id"]]["type"] == "output"):
-        recordingPopulation = nodes[edge["input"]["id"]]
-    elif (projection_type == "all_to_all"):
+    if projection_type == "all_to_all" and isinstance(nodes[edge["output"]["id"]], pynn.Population):
         assert(edge['projection_target']['kind'] == 'static') # only support static connectivity for now
         target = edge['projection_target']['effect']
         projection = pynn.Projection(nodes[edge["input"]["id"]],
                         nodes[edge["output"]["id"]],
                         method=pynn.AllToAllConnector(),
                         target=target)
-        projection.setWeights(edge["projection_type"]["weight"])
+        weight = edge["projection_type"]["weight"]
+        if edge['projection_target']['effect'] == 'inhibitory' and weight > 0:
+            weight = weight * -1
+
+        projection.setWeights(weight)
     else:
         print "not yet supported"
 
@@ -32,6 +32,8 @@ def create_node(node):
     kind = node["type"]
     if (kind == "population"):
         neuron = node["neuron_type"]
+        neuron.pop("e_rev_E", None) # Remove the 'e_rev_E' and 'e_rev_I' who're is not allowed
+        neuron.pop("e_rev_I", None)
         return pynn.Population(node["num_neurons"],
                                 pynn.IF_curr_alpha,
                                 cellparams={k:v for k,v in node["neuron_type"].items() if k not in ["type"]})
@@ -53,11 +55,9 @@ def spikes_to_json(spikes):
     for spike in spikes:
         spiking_neurons[int(spike[0])].append(spike[1])
 
-    return json.dumps(spiking_neurons.values(), separators=(',', ':'))
+    return spiking_neurons.values()
 
 def execute(conf):
-    global recordingPopulation
-
     # NEST specific stuff
     pynn.setup()
 
@@ -71,17 +71,23 @@ def execute(conf):
 
     for node in b["nodes"]:
         nodes[node["id"]] = create_node(node)
+        if "record_spikes" in node and node["record_spikes"]:
+            outputs[node["label"]] = nodes[node["id"]]
     for proj in b["edges"]:
-        create_edge(nodes, proj, outputs)
+        create_edge(nodes, proj)
 
-    recordingPopulation.record()
+    # Start recordings
+    for label in outputs:
+        outputs[label].record()
+
     pynn.run(conf["simulation_time"])
-    spikes = spikes_to_json(recordingPopulation.getSpikes())
-    pynn.end()
-    return spikes
 
-def unmute_stdout(handle):
-    sys.stdout = handle
+    # Collect spikes
+    for label in outputs:
+        outputs[label] = spikes_to_json(outputs[label].getSpikes())
+    pynn.end()
+
+    return json.dumps(outputs, separators=(',', ':'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='nest pynn executor')
