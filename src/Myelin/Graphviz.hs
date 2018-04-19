@@ -12,7 +12,7 @@ import Data.GraphViz.Printing
 import Data.Text
 import Data.Text.Lazy (toStrict)
 
-import Myelin.SNN hiding (toGraph, renderNetwork)
+import Myelin.SNN
 
 toGraph :: BlockState -> DotGraph String
 toGraph b = digraph (Str "Network") $ do

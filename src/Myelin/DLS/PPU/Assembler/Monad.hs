@@ -25,7 +25,7 @@ type Asm a = StateT AsmState IO a
 
 makeLenses ''AsmState
 
-allocateRegister :: Asm (Register)
+allocateRegister :: Asm Register
 allocateRegister = do
     fr <- use freeRegisters
     case fr of
@@ -34,6 +34,35 @@ allocateRegister = do
             freeRegisters .= fs
             usedRegisters <>= [f]
             return f
+
+releaseRegister :: Register -> Asm ()
+releaseRegister r = do
+    -- TODO: Two sources of error:
+    -- This doesn't check whether the register
+    -- was actually in the used registers and
+    -- it also doesn't therefore prevent dublicate
+    -- insertion into the freeRegisters. 
+    used <- use usedRegisters
+    let used' = filter (r ==) used
+    usedRegisters .= used'
+    freeRegisters <>= [r]
+
+allocateTemporaryRegister :: Asm Register
+allocateTemporaryRegister = do
+    fr <- use freeRegisters
+    case fr of
+        [] -> error "Error: No more registers to allocate."
+        f:fs -> do
+            freeRegisters .= fs
+            temporaryRegisters <>= [f]
+            return f
+
+releaseTemporaryRegister :: Register -> Asm ()
+releaseTemporaryRegister r = do
+    temp <- use temporaryRegisters
+    let temp' = filter (r ==) temp
+    temporaryRegisters .= temp'
+    freeRegisters <>= [r]
 
 iop :: (Word32 -> Bool -> Bool -> A.Inst)
     -> Word32 
@@ -256,8 +285,8 @@ fxvinx ra rb  = fxvop (\rt ra rb _ -> A.fxvinx rt ra rb) ra rb A.Fxv_cond_null
 fxvpckbu      = fxvop A.fxvpckbu      
 fxvoutx ra rb = fxvop (\rt ra rb _ -> A.fxvoutx rt ra rb) ra rb A.Fxv_cond_null      
 fxvpckbl      = fxvop A.fxvpckbl      
-fxvsplath ra  = fxvop (\rt ra rb _ -> A.fxvsplath rt ra rb) ra (Register 0) A.Fxv_cond_null
-fxvsplatb ra  = fxvop (\rt ra rb _ -> A.fxvsplatb rt ra rb) ra (Register 0) A.Fxv_cond_null
+fxvsplath ra  = fxvop (\rt ra rb _ -> A.fxvsplath rt ra) ra (Register 0) A.Fxv_cond_null
+fxvsplatb ra  = fxvop (\rt ra rb _ -> A.fxvsplatb rt ra) ra (Register 0) A.Fxv_cond_null
 fxvupckbr     = fxvop A.fxvupckbr     
 fxvupckbl     = fxvop A.fxvupckbl     
 fxvcmph       = fxvop A.fxvcmph       
