@@ -18,8 +18,13 @@ data AsmState = AsmState {
     _instructions :: [A.Inst],
     _freeRegisters :: [Register],
     _temporaryRegisters :: [Register],
-    _usedRegisters :: [Register]
+    _usedRegisters :: [Register],
+    _freeVectorRegisters :: [VectorRegister],
+    _temporaryVectorRegisters :: [VectorRegister],
+    _usedVectorRegisters :: [VectorRegister]
 }
+
+initialState = AsmState [] [] [] [] [] [] [] []
 
 type Asm a = StateT AsmState IO a
 
@@ -51,7 +56,7 @@ allocateTemporaryRegister :: Asm Register
 allocateTemporaryRegister = do
     fr <- use freeRegisters
     case fr of
-        [] -> error "Error: No more registers to allocate."
+        [] -> error "Error: No more vector registers to allocate."
         f:fs -> do
             freeRegisters .= fs
             temporaryRegisters <>= [f]
@@ -63,6 +68,40 @@ releaseTemporaryRegister r = do
     let temp' = filter (r ==) temp
     temporaryRegisters .= temp'
     freeRegisters <>= [r]
+
+allocateVectorRegister :: Asm VectorRegister
+allocateVectorRegister = do
+    fr <- use freeVectorRegisters
+    case fr of
+        [] -> error "Error: No more vector registers to allocate."
+        f:fs -> do
+            freeVectorRegisters .= fs
+            usedVectorRegisters <>= [f]
+            return f
+
+releaseVectorRegister :: VectorRegister -> Asm ()
+releaseVectorRegister r = do
+    used <- use usedVectorRegisters
+    let used' = filter (r ==) used
+    usedVectorRegisters .= used'
+    freeVectorRegisters <>= [r]
+
+allocateTemporaryVectorRegister :: Asm VectorRegister
+allocateTemporaryVectorRegister = do
+    fr <- use freeVectorRegisters
+    case fr of
+        [] -> error "Error: No more vector registers to allocate."
+        f:fs -> do
+            freeVectorRegisters .= fs
+            temporaryVectorRegisters <>= [f]
+            return f
+
+releaseTemporaryVectorRegister :: VectorRegister -> Asm ()
+releaseTemporaryVectorRegister r = do
+    temp <- use temporaryVectorRegisters
+    let temp' = filter (r ==) temp
+    temporaryVectorRegisters .= temp'
+    freeVectorRegisters <>= [r]
 
 iop :: (Word32 -> Bool -> Bool -> A.Inst)
     -> Word32 
@@ -117,14 +156,23 @@ xlop :: (Register -> Register -> Register -> Bool -> A.Inst)
     -> Asm ()
 xlop op bt ba bb lk = instructions <>= [op bt ba bb lk]
 
-fxvop :: (Register -> Register -> Register -> A.Fxv_cond -> A.Inst) 
-    -> Register 
-    -> Register 
+fxvop :: (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst) 
+    -> VectorRegister 
+    -> VectorRegister 
     -> A.Fxv_cond 
-    -> Asm Register
+    -> Asm VectorRegister
 fxvop op ra rb cond = do
-    rt <- allocateRegister
+    rt <- allocateVectorRegister
     instructions <>= [op rt ra rb cond] 
+    return rt
+
+fxvsop :: (VectorRegister -> Register -> Register -> A.Inst) 
+    -> Register
+    -> Register 
+    -> Asm VectorRegister
+fxvsop op ra rb = do
+    rt <- allocateVectorRegister
+    instructions <>= [op rt ra rb] 
     return rt
 
 -- D Instruction Format
@@ -253,6 +301,7 @@ crand  = xlop A.crand
 crorc  = xlop A.crorc  
 cror   = xlop A.cror   
 bcctr  = xlop A.bcctr  
+
 -- XFX Instruction Format
 {-
 mfocrf = xfxop A.mfocrf 
@@ -260,7 +309,8 @@ mtocrf = xfxop A.mtocrf
 mfspr  = xfxop A.mfspr  
 mtspr  = xfxop A.mtspr  
 -}
--- FXV Instruction Format
+
+-- FXV/FXVS Instruction Format
 fxvmahm       = fxvop A.fxvmahm       
 fxvmabm       = fxvop A.fxvmabm       
 fxvmtacb      = fxvop A.fxvmtacb      
@@ -281,12 +331,12 @@ fxvmultachm   = fxvop A.fxvmultachm
 fxvmultacbm   = fxvop A.fxvmultacbm   
 fxvmultachfs  = fxvop A.fxvmultachfs  
 fxvmultacbfs  = fxvop A.fxvmultacbfs  
-fxvinx ra rb  = fxvop (\rt ra rb _ -> A.fxvinx rt ra rb) ra rb A.Fxv_cond_null      
+fxvinx ra rb  = fxvsop A.fxvinx
 fxvpckbu      = fxvop A.fxvpckbu      
-fxvoutx ra rb = fxvop (\rt ra rb _ -> A.fxvoutx rt ra rb) ra rb A.Fxv_cond_null      
+fxvoutx ra rb = fxvsop A.fxvoutx 
 fxvpckbl      = fxvop A.fxvpckbl      
-fxvsplath ra  = fxvop (\rt ra rb _ -> A.fxvsplath rt ra) ra (Register 0) A.Fxv_cond_null
-fxvsplatb ra  = fxvop (\rt ra rb _ -> A.fxvsplatb rt ra) ra (Register 0) A.Fxv_cond_null
+fxvsplath ra  = fxvsop (\rt ra rb -> A.fxvsplath rt ra) ra (Register 0)
+fxvsplatb ra  = fxvsop (\rt ra rb -> A.fxvsplatb rt ra) ra (Register 0)
 fxvupckbr     = fxvop A.fxvupckbr     
 fxvupckbl     = fxvop A.fxvupckbl     
 fxvcmph       = fxvop A.fxvcmph       
@@ -312,5 +362,5 @@ fxvaddhm      = fxvop A.fxvaddhm
 fxvaddbm      = fxvop A.fxvaddbm      
 fxvaddhfs     = fxvop A.fxvaddhfs     
 fxvaddbfs     = fxvop A.fxvaddbfs     
-fxvlax ra rb  = fxvop (\rt ra rb _ -> A.fxvlax rt ra rb) ra rb A.Fxv_cond_null       
-fxvstax ra rb = fxvop (\rt ra rb _ -> A.fxvstax rt ra rb) ra rb A.Fxv_cond_null
+fxvlax ra rb  = fxvsop A.fxvlax
+fxvstax ra rb = fxvsop A.fxvstax

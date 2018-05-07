@@ -485,6 +485,7 @@ instance ToJSON ExecutionTarget where
       , "wafer" .= _wafer
       , "hicann" .= _hicann
       ]
+    toJSON SpiNNaker = object [ "kind" .= ("spinnaker" :: String) ] 
 
 instance FromJSON ExecutionTarget where
     parseJSON = withObject "execution_target" $ \o -> do
@@ -496,6 +497,7 @@ instance FromJSON ExecutionTarget where
             "nest" -> Nest <$>
                         o .: "min_timestep" <*>
                         o .: "max_timestep"
+            "spinnaker" -> return SpiNNaker
             _ -> error "target not supported yet"
 
 {--
@@ -612,12 +614,11 @@ fileOutput filename = do
 
 -- Example API use
 
-
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1, 2, 3, 5]
     a <- population 10 if_current_exponential_default "a" False
-    b <- population 20 if_current_exponential_default "b" False -- TODO: Labels should be checked for doublication
+    b <- population 20 if_current_exponential_default "b" False
     c <- population 20 if_current_exponential_default "c" False
     -- TODO: This is kind of ugly now
     projection (AllToAll 1.0 False) (Static Excitatory) input a

@@ -8,6 +8,9 @@ import Data.Bits
 data Register = Register Word32 deriving (Eq, Show)
 encodeRegister (Register r) = r
 
+data VectorRegister = VectorRegister Word32 deriving (Eq, Show)
+encodeVectorRegister (VectorRegister r) = r
+
 r0 = Register 0
 r1 = Register 1
 r2 = Register 2
@@ -40,6 +43,39 @@ r28 = Register 28
 r29 = Register 29 
 r30 = Register 30
 r31 = Register 31
+
+vr0  = VectorRegister 0
+vr1  = VectorRegister 1
+vr2  = VectorRegister 2
+vr3  = VectorRegister 3
+vr4  = VectorRegister 4
+vr5  = VectorRegister 5
+vr6  = VectorRegister 6
+vr7  = VectorRegister 7
+vr8  = VectorRegister 8
+vr9  = VectorRegister 9
+vr10 = VectorRegister 10
+vr11 = VectorRegister 11
+vr12 = VectorRegister 12 
+vr13 = VectorRegister 13 
+vr14 = VectorRegister 14
+vr15 = VectorRegister 15
+vr16 = VectorRegister 16
+vr17 = VectorRegister 17
+vr18 = VectorRegister 18
+vr19 = VectorRegister 19
+vr20 = VectorRegister 20
+vr21 = VectorRegister 21
+vr22 = VectorRegister 22
+vr23 = VectorRegister 23
+vr24 = VectorRegister 24
+vr25 = VectorRegister 25
+vr26 = VectorRegister 26
+vr27 = VectorRegister 27
+vr28 = VectorRegister 28 
+vr29 = VectorRegister 29 
+vr30 = VectorRegister 30
+vr31 = VectorRegister 31
 
 data SpecialPurposeRegister = SpecialPurposeRegister Word32 deriving (Eq, Show)
 encodeSpecialPurposeRegister (SpecialPurposeRegister r) = r
@@ -595,12 +631,12 @@ fxvmultachm   rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultachm   cond
 fxvmultacbm   rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultacbm   cond
 fxvmultachfs  rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultachfs  cond
 fxvmultacbfs  rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultacbfs  cond
-fxvinx        rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvinx        Fxv_cond_null
+fxvinx        rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvinx
 fxvpckbu      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbu      cond
-fxvoutx       rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvoutx       Fxv_cond_null
+fxvoutx       rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvoutx
 fxvpckbl      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbl      cond
-fxvsplath     rt ra         = FXV Op_nve_xo rt ra (Register 0) Xop_fxvsplath Fxv_cond_null
-fxvsplatb     rt ra         = FXV Op_nve_xo rt ra (Register 0) Xop_fxvsplatb Fxv_cond_null
+fxvsplath     rt ra         = FXVS Op_nve_xo rt ra (Register 0) Xop_fxvsplath
+fxvsplatb     rt ra         = FXVS Op_nve_xo rt ra (Register 0) Xop_fxvsplatb
 fxvupckbr     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbr     cond
 fxvupckbl     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbl     cond
 fxvcmph       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmph       cond
@@ -626,8 +662,8 @@ fxvaddhm      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddhm      cond
 fxvaddbm      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddbm      cond
 fxvaddhfs     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddhfs     cond
 fxvaddbfs     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddbfs     cond
-fxvlax        rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvlax        Fxv_cond_null
-fxvstax       rt ra rb      = FXV Op_nve_xo rt ra rb Xop_fxvstax       Fxv_cond_null
+fxvlax        rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvlax
+fxvstax       rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvstax
 
 -- Instruction formats supported by the PPU
 data Inst =
@@ -697,11 +733,18 @@ data Inst =
     -- extension for the ppu
     | FXV {
         _opcd :: Opcd,
-        _rt :: Register,
-        _ra :: Register,
-        _rb :: Register,
+        _vrt :: VectorRegister,
+        _vra :: VectorRegister,
+        _vrb :: VectorRegister,
         _fxv :: Fxv_opcd,
         _cond :: Fxv_cond 
+    }
+    | FXVS {
+        _opcd :: Opcd,
+        _vrt :: VectorRegister,
+        _ra :: Register,
+        _rb :: Register,
+        _fxv :: Fxv_opcd
     }
 
 encode :: Inst -> Word32
@@ -751,8 +794,14 @@ encode inst = case inst of
           .|. (xl_opcd _xl `shift` 21)
           .|. (if _lk then 1 `shift` 31 else 0)
     FXV {..} -> (opcode _opcd)
-          .|. (encodeRegister _rt `shift` 6)
+          .|. (encodeVectorRegister _vrt `shift` 6)
+          .|. (encodeVectorRegister _vra `shift` 11)
+          .|. (encodeVectorRegister _vrb `shift` 16)
+          .|. (fxv_opcd _fxv `shift` 21)
+          .|. (fxv_cond _cond `shift` 30)
+    FXVS {..} -> (opcode _opcd)
+          .|. (encodeVectorRegister _vrt `shift` 6)
           .|. (encodeRegister _ra `shift` 11)
           .|. (encodeRegister _rb `shift` 16)
           .|. (fxv_opcd _fxv `shift` 21)
-          .|. (fxv_cond _cond `shift` 30)
+
