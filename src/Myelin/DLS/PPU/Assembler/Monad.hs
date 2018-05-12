@@ -1,143 +1,137 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedLists #-}
 module Myelin.DLS.PPU.Assembler.Monad where
 
 import Control.Monad.Trans.State
 import Control.Monad.IO.Class
 import Control.Lens
-
+import Data.Maybe
 import Data.Word
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 import Myelin.DLS.PPU.Assembler as A
 
 data Label = Label {
     _id :: Int
-}
+} deriving (Eq, Show)
 
 data AsmState = AsmState {
     _labels :: [Label],
     _instructions :: [A.Inst],
-    _freeRegisters :: [Register],
-    _temporaryRegisters :: [Register],
-    _usedRegisters :: [Register],
-    _freeVectorRegisters :: [VectorRegister],
-    _temporaryVectorRegisters :: [VectorRegister],
-    _usedVectorRegisters :: [VectorRegister]
-}
+    _freeRegisters :: Set Register,
+    _temporaryRegisters :: Set Register,
+    _usedRegisters :: Set Register,
+    _freeVectorRegisters :: Set VectorRegister,
+    _temporaryVectorRegisters :: Set VectorRegister,
+    _usedVectorRegisters :: Set VectorRegister,
+    _registerLabels :: [(Label, Register)]
+} deriving (Eq, Show)
 
-initialState = AsmState [] [] [] [] [] [] [] []
+initialAsmState = AsmState [] [] [A.R0 .. A.R31] [] [] [A.VR0 .. A.VR31] [] [] []
 
-type Asm a = StateT AsmState IO a
+type Asm a m = StateT AsmState m a
 
 makeLenses ''AsmState
 
-allocateRegister :: Asm Register
+allocateRegister :: Monad m => Asm Register m
 allocateRegister = do
     fr <- use freeRegisters
-    case fr of
-        [] -> error "Error: No more registers to allocate."
-        f:fs -> do
-            freeRegisters .= fs
-            usedRegisters <>= [f]
-            return f
+    let f = fromJust $ Set.lookupMin fr
+    freeRegisters .= Set.deleteMin fr
+    usedRegisters <>= [f]
+    return f
 
-releaseRegister :: Register -> Asm ()
+releaseRegister :: Monad m => Register -> Asm () m
 releaseRegister r = do
-    -- TODO: Two sources of error:
-    -- This doesn't check whether the register
-    -- was actually in the used registers and
-    -- it also doesn't therefore prevent dublicate
-    -- insertion into the freeRegisters. 
     used <- use usedRegisters
-    let used' = filter (r ==) used
-    usedRegisters .= used'
+    usedRegisters .= Set.delete r used
     freeRegisters <>= [r]
 
-allocateTemporaryRegister :: Asm Register
+-- TODO: This does not actually handle errors...
+allocateTemporaryRegister :: Monad m => Asm Register m
 allocateTemporaryRegister = do
     fr <- use freeRegisters
-    case fr of
-        [] -> error "Error: No more vector registers to allocate."
-        f:fs -> do
-            freeRegisters .= fs
-            temporaryRegisters <>= [f]
-            return f
+    let f = fromJust $ Set.lookupMin fr
+    freeRegisters .= Set.deleteMin fr
+    temporaryRegisters <>= [f]
+    return f
 
-releaseTemporaryRegister :: Register -> Asm ()
+releaseTemporaryRegister :: Monad m => Register -> Asm () m
 releaseTemporaryRegister r = do
     temp <- use temporaryRegisters
-    let temp' = filter (r ==) temp
-    temporaryRegisters .= temp'
+    temporaryRegisters .= Set.delete r temp
     freeRegisters <>= [r]
 
-allocateVectorRegister :: Asm VectorRegister
+allocateVectorRegister :: Monad m => Asm VectorRegister m
 allocateVectorRegister = do
     fr <- use freeVectorRegisters
-    case fr of
-        [] -> error "Error: No more vector registers to allocate."
-        f:fs -> do
-            freeVectorRegisters .= fs
-            usedVectorRegisters <>= [f]
-            return f
+    let f = fromJust $ Set.lookupMin fr
+    freeVectorRegisters .= Set.deleteMin fr
+    usedVectorRegisters <>= [f]
+    return f
 
-releaseVectorRegister :: VectorRegister -> Asm ()
+releaseVectorRegister :: Monad m => VectorRegister -> Asm () m
 releaseVectorRegister r = do
     used <- use usedVectorRegisters
-    let used' = filter (r ==) used
-    usedVectorRegisters .= used'
+    usedVectorRegisters .= Set.delete r used
     freeVectorRegisters <>= [r]
 
-allocateTemporaryVectorRegister :: Asm VectorRegister
+allocateTemporaryVectorRegister :: Monad m => Asm VectorRegister m
 allocateTemporaryVectorRegister = do
     fr <- use freeVectorRegisters
-    case fr of
-        [] -> error "Error: No more vector registers to allocate."
-        f:fs -> do
-            freeVectorRegisters .= fs
-            temporaryVectorRegisters <>= [f]
-            return f
+    let f = fromJust $ Set.lookupMin fr
+    freeVectorRegisters .= Set.deleteMin fr
+    temporaryVectorRegisters <>= [f]
+    return f
 
-releaseTemporaryVectorRegister :: VectorRegister -> Asm ()
+releaseTemporaryVectorRegister :: Monad m => VectorRegister -> Asm () m
 releaseTemporaryVectorRegister r = do
     temp <- use temporaryVectorRegisters
-    let temp' = filter (r ==) temp
-    temporaryVectorRegisters .= temp'
+    temporaryVectorRegisters .= Set.delete r temp
     freeVectorRegisters <>= [r]
 
-iop :: (Word32 -> Bool -> Bool -> A.Inst)
+iop :: Monad m => (Word32 -> Bool -> Bool -> A.Inst)
     -> Word32 
     -> Bool 
     -> Bool 
-    -> Asm ()
+    -> Asm () m
 iop op li aa lk = instructions <>= [op li aa lk]
 
-bop :: (Register -> Register -> Word32 -> Bool -> Bool -> A.Inst) 
+bop :: Monad m => (Register -> Register -> Word32 -> Bool -> Bool -> A.Inst) 
     -> Register 
     -> Register
     -> Word32 
     -> Bool 
     -> Bool 
-    -> Asm ()
+    -> Asm () m
 bop op bo bi bd aa lk = instructions <>= [inst]
     where inst = op bo bi bd aa lk
 
-dop :: (Register -> Register -> Word32 -> A.Inst) 
+dop :: Monad m => (Register -> Register -> Word32 -> A.Inst) 
     -> Register 
     -> Word32
-    -> Asm Register
+    -> Asm Register m
 dop op ra d = do
     rt <- allocateRegister
     instructions <>= [op rt ra d]
     return rt
 
-xoop :: (Register -> Register -> Register -> Bool -> Bool -> A.Inst)
-     -> Register -> Register -> Bool -> Bool -> Asm Register
+xoop :: Monad m => (Register -> Register -> Register -> Bool -> Bool -> A.Inst)
+     -> Register 
+     -> Register 
+     -> Bool 
+     -> Bool 
+     -> Asm Register m
 xoop op ra rb oe rc = do
     rt <- allocateRegister
     instructions <>= [op rt ra rb oe rc]
     return rt
 
-xop :: (Register -> Register -> Register -> Bool -> A.Inst)
-    -> Register -> Register -> Bool -> Asm Register
+xop :: Monad m => (Register -> Register -> Register -> Bool -> A.Inst)
+    -> Register 
+    -> Register 
+    -> Bool 
+    -> Asm Register m
 xop op ra rb rc = do
     rt <- allocateRegister
     instructions <>= [op rt ra rb rc]
@@ -145,37 +139,49 @@ xop op ra rb rc = do
 
 -- mop :: Register -> Register -> Register -> Register -> Register -> Bool -> Asm ()
 
-xfxop :: Register -> SpecialPurposeRegister -> Asm ()
+xfxop :: Monad m => Register 
+      -> SpecialPurposeRegister 
+      -> Asm () m
 xfxop = undefined
 
-xlop :: (Register -> Register -> Register -> Bool -> A.Inst) 
+xlop :: Monad m => (Register -> Register -> Register -> Bool -> A.Inst) 
     -> Register 
     -> Register 
     -> Register 
     -> Bool 
-    -> Asm ()
+    -> Asm () m
 xlop op bt ba bb lk = instructions <>= [op bt ba bb lk]
 
-fxvop :: (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst) 
+fxvop :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst) 
     -> VectorRegister 
     -> VectorRegister 
     -> A.Fxv_cond 
-    -> Asm VectorRegister
+    -> Asm VectorRegister m
 fxvop op ra rb cond = do
     rt <- allocateVectorRegister
     instructions <>= [op rt ra rb cond] 
     return rt
 
-fxvsop :: (VectorRegister -> Register -> Register -> A.Inst) 
+fxvsop :: Monad m => (VectorRegister -> Register -> Register -> A.Inst) 
     -> Register
     -> Register 
-    -> Asm VectorRegister
+    -> Asm VectorRegister m
 fxvsop op ra rb = do
     rt <- allocateVectorRegister
     instructions <>= [op rt ra rb] 
     return rt
 
 -- D Instruction Format
+twi         :: Monad m => Register -> Word32 -> Asm Register m
+mulli       :: Monad m => Register -> Word32 -> Asm Register m
+subfic      :: Monad m => Register -> Word32 -> Asm Register m
+syncmpi_rec :: Monad m => Register -> Word32 -> Asm Register m
+cmpli       :: Monad m => Register -> Word32 -> Asm Register m
+cmpi        :: Monad m => Register -> Word32 -> Asm Register m
+addic       :: Monad m => Register -> Word32 -> Asm Register m
+addic_rec   :: Monad m => Register -> Word32 -> Asm Register m
+addi        :: Monad m => Register -> Word32 -> Asm Register m
+addis       :: Monad m => Register -> Word32 -> Asm Register m
 twi         = dop A.twi         
 mulli       = dop A.mulli       
 subfic      = dop A.subfic      
@@ -187,9 +193,36 @@ addic_rec   = dop A.addic_rec
 addi        = dop A.addi        
 addis       = dop A.addis       
 --
+bc :: Monad m => Register -> Register -> Word32 -> Bool -> Bool -> Asm () m
 bc = bop A.bc
+branch :: Monad m => Word32 -> Bool -> Bool -> Asm () m
 branch = iop A.branch
 -- D Instruction Format
+rlwimi :: Monad m => Register -> Word32 -> Asm Register m
+rlwinm :: Monad m => Register -> Word32 -> Asm Register m
+rlwnm  :: Monad m => Register -> Word32 -> Asm Register m
+ori    :: Monad m => Register -> Word32 -> Asm Register m
+oris   :: Monad m => Register -> Word32 -> Asm Register m
+xori   :: Monad m => Register -> Word32 -> Asm Register m
+xoris  :: Monad m => Register -> Word32 -> Asm Register m
+andi   :: Monad m => Register -> Word32 -> Asm Register m
+andis  :: Monad m => Register -> Word32 -> Asm Register m
+lwz    :: Monad m => Register -> Word32 -> Asm Register m
+lwzu   :: Monad m => Register -> Word32 -> Asm Register m
+lbz    :: Monad m => Register -> Word32 -> Asm Register m
+lbzu   :: Monad m => Register -> Word32 -> Asm Register m
+stw    :: Monad m => Register -> Word32 -> Asm Register m
+stwu   :: Monad m => Register -> Word32 -> Asm Register m
+stb    :: Monad m => Register -> Word32 -> Asm Register m
+stbu   :: Monad m => Register -> Word32 -> Asm Register m
+lhz    :: Monad m => Register -> Word32 -> Asm Register m
+lhzu   :: Monad m => Register -> Word32 -> Asm Register m
+lha    :: Monad m => Register -> Word32 -> Asm Register m
+lhau   :: Monad m => Register -> Word32 -> Asm Register m
+sth    :: Monad m => Register -> Word32 -> Asm Register m
+sthu   :: Monad m => Register -> Word32 -> Asm Register m
+lmw    :: Monad m => Register -> Word32 -> Asm Register m
+stmw   :: Monad m => Register -> Word32 -> Asm Register m
 rlwimi = dop A.rlwimi
 rlwinm = dop A.rlwinm
 rlwnm  = dop A.rlwnm 
@@ -214,8 +247,61 @@ lhau   = dop A.lhau
 sth    = dop A.sth   
 sthu   = dop A.sthu  
 lmw    = dop A.lmw   
-stmw   = dop A.stmw    
+stmw   = dop A.stmw
 -- X Instruction Format
+cmp     :: Monad m => Register -> Register -> Bool -> Asm Register m
+tw      :: Monad m => Register -> Register -> Bool -> Asm Register m
+lwzx    :: Monad m => Register -> Register -> Bool -> Asm Register m
+slw     :: Monad m => Register -> Register -> Bool -> Asm Register m
+cntlzw  :: Monad m => Register -> Register -> Bool -> Asm Register m
+and     :: Monad m => Register -> Register -> Bool -> Asm Register m
+cmpl    :: Monad m => Register -> Register -> Bool -> Asm Register m
+nvem    :: Monad m => Register -> Register -> Bool -> Asm Register m
+nves    :: Monad m => Register -> Register -> Bool -> Asm Register m
+nvemtl  :: Monad m => Register -> Register -> Bool -> Asm Register m
+lwzux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+andc    :: Monad m => Register -> Register -> Bool -> Asm Register m
+wait    :: Monad m => Register -> Register -> Bool -> Asm Register m
+mfmsr   :: Monad m => Register -> Register -> Bool -> Asm Register m
+lbzx    :: Monad m => Register -> Register -> Bool -> Asm Register m
+lbzux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+popcb   :: Monad m => Register -> Register -> Bool -> Asm Register m
+nor     :: Monad m => Register -> Register -> Bool -> Asm Register m
+mtmsr   :: Monad m => Register -> Register -> Bool -> Asm Register m
+stwx    :: Monad m => Register -> Register -> Bool -> Asm Register m
+prtyw   :: Monad m => Register -> Register -> Bool -> Asm Register m
+stwux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+stbx    :: Monad m => Register -> Register -> Bool -> Asm Register m
+stbux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+lhzx    :: Monad m => Register -> Register -> Bool -> Asm Register m
+eqv     :: Monad m => Register -> Register -> Bool -> Asm Register m
+eciwx   :: Monad m => Register -> Register -> Bool -> Asm Register m
+lhzux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+xor     :: Monad m => Register -> Register -> Bool -> Asm Register m
+lhax    :: Monad m => Register -> Register -> Bool -> Asm Register m
+lhaux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+sthx    :: Monad m => Register -> Register -> Bool -> Asm Register m
+orc     :: Monad m => Register -> Register -> Bool -> Asm Register m
+ecowx   :: Monad m => Register -> Register -> Bool -> Asm Register m
+sthux   :: Monad m => Register -> Register -> Bool -> Asm Register m
+or      :: Monad m => Register -> Register -> Bool -> Asm Register m
+nand    :: Monad m => Register -> Register -> Bool -> Asm Register m
+srw     :: Monad m => Register -> Register -> Bool -> Asm Register m
+sync    :: Monad m => Register -> Register -> Bool -> Asm Register m
+synm    :: Monad m => Register -> Register -> Bool -> Asm Register m
+syns    :: Monad m => Register -> Register -> Bool -> Asm Register m
+synmtl  :: Monad m => Register -> Register -> Bool -> Asm Register m
+synmtvr :: Monad m => Register -> Register -> Bool -> Asm Register m
+synmfvr :: Monad m => Register -> Register -> Bool -> Asm Register m
+synmtp  :: Monad m => Register -> Register -> Bool -> Asm Register m
+synmfp  :: Monad m => Register -> Register -> Bool -> Asm Register m
+synmvvr :: Monad m => Register -> Register -> Bool -> Asm Register m
+synops  :: Monad m => Register -> Register -> Bool -> Asm Register m
+synswp  :: Monad m => Register -> Register -> Bool -> Asm Register m
+sraw    :: Monad m => Register -> Register -> Bool -> Asm Register m
+srawi   :: Monad m => Register -> Register -> Bool -> Asm Register m
+extsh   :: Monad m => Register -> Register -> Bool -> Asm Register m
+extsb   :: Monad m => Register -> Register -> Bool -> Asm Register m
 cmp     = xop A.cmp     
 tw      = xop A.tw      
 lwzx    = xop A.lwzx    
@@ -270,6 +356,22 @@ srawi   = xop A.srawi
 extsh   = xop A.extsh   
 extsb   = xop A.extsb  
 -- XO Instruction Format
+subfc  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+addc   :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+mulhwu :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+subf   :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+mulhw  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+neg    :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+subfe  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+adde   :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+subfze :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+addze  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+subfme :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+addme  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+mullw  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+add    :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+divwu  :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
+divw   :: Monad m => Register -> Register -> Bool -> Bool -> Asm Register m
 subfc  = xoop A.subfc  
 addc   = xoop A.addc   
 mulhwu = xoop A.mulhwu 
@@ -285,8 +387,22 @@ addme  = xoop A.addme
 mullw  = xoop A.mullw  
 add    = xoop A.add    
 divwu  = xoop A.divwu  
-divw   = xoop A.divw   
+divw   = xoop A.divw
 -- XL Instruction Format
+mcrf   :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+bclr   :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+crnor  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+rfmci  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+rfi    :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+rfci   :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+crandc :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+crxor  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+crnand :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+creqv  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+crand  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+crorc  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+cror   :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
+bcctr  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
 mcrf   = xlop A.mcrf   
 bclr   = xlop A.bclr   
 crnor  = xlop A.crnor  
@@ -311,6 +427,59 @@ mtspr  = xfxop A.mtspr
 -}
 
 -- FXV/FXVS Instruction Format
+fxvmahm       :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmabm       :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmtacb      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmtach      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmahfs      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmabfs      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmtacbf     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmtachf     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmatachm    :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmatacbm    :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmatachfs   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmatacbfs   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmulhm      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmulbm      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmulhfs     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmulbfs     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmultachm   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmultacbm   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmultachfs  :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvmultacbfs  :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvinx        :: Monad m => Register -> Register -> Asm VectorRegister m
+fxvpckbu      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvoutx       :: Monad m => Register -> Register -> Asm VectorRegister m
+fxvpckbl      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvsplath     :: Monad m => Register                                       -> Asm VectorRegister m
+fxvsplatb     :: Monad m => Register                                       -> Asm VectorRegister m
+fxvupckbr     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvupckbl     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvcmph       :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvcmpb       :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvshh        :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvshb        :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvsel        :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvsubhm      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvsubbm      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvsubhfs     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvsubbfs     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddactachm :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddactacb  :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddactachf :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddactacbf :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddachm    :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddacbm    :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddachfs   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddacbfs   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddtachm   :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddtacb    :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddhm      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddbm      :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddhfs     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvaddbfs     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> Asm VectorRegister m
+fxvlax        :: Monad m => Register -> Register -> Asm VectorRegister m
+fxvstax       :: Monad m => Register -> Register -> Asm VectorRegister m
 fxvmahm       = fxvop A.fxvmahm       
 fxvmabm       = fxvop A.fxvmabm       
 fxvmtacb      = fxvop A.fxvmtacb      
@@ -331,12 +500,12 @@ fxvmultachm   = fxvop A.fxvmultachm
 fxvmultacbm   = fxvop A.fxvmultacbm   
 fxvmultachfs  = fxvop A.fxvmultachfs  
 fxvmultacbfs  = fxvop A.fxvmultacbfs  
-fxvinx ra rb  = fxvsop A.fxvinx
+fxvinx        = fxvsop A.fxvinx
 fxvpckbu      = fxvop A.fxvpckbu      
-fxvoutx ra rb = fxvsop A.fxvoutx 
+fxvoutx       = fxvsop A.fxvoutx 
 fxvpckbl      = fxvop A.fxvpckbl      
-fxvsplath ra  = fxvsop (\rt ra rb -> A.fxvsplath rt ra) ra (Register 0)
-fxvsplatb ra  = fxvsop (\rt ra rb -> A.fxvsplatb rt ra) ra (Register 0)
+fxvsplath ra  = fxvsop (\rt ra rb -> A.fxvsplath rt ra) ra R0
+fxvsplatb ra  = fxvsop (\rt ra rb -> A.fxvsplatb rt ra) ra R0
 fxvupckbr     = fxvop A.fxvupckbr     
 fxvupckbl     = fxvop A.fxvupckbl     
 fxvcmph       = fxvop A.fxvcmph       
@@ -362,5 +531,5 @@ fxvaddhm      = fxvop A.fxvaddhm
 fxvaddbm      = fxvop A.fxvaddbm      
 fxvaddhfs     = fxvop A.fxvaddhfs     
 fxvaddbfs     = fxvop A.fxvaddbfs     
-fxvlax ra rb  = fxvsop A.fxvlax
-fxvstax ra rb = fxvsop A.fxvstax
+fxvlax        = fxvsop A.fxvlax
+fxvstax       = fxvsop A.fxvstax

@@ -69,10 +69,10 @@ data NeuronType =
         v_thresh :: Float -- ^ Threshhold potential
     }
     | IFCurrExp {
-        cm :: Float,
-        tau_m :: Float,
-        tau_syn_E :: Float,
-        tau_syn_I :: Float,
+        cm :: Float, -- ^ Membrane capacitance
+        tau_m :: Float, -- ^ Membrane time constant
+        tau_syn_E :: Float, -- ^ Excitatory synaptic time constant
+        tau_syn_I :: Float, -- ^ Inhibitory synaptic time constant
         tau_refrac :: Float,
         v_thresh :: Float,
         v_rest :: Float,
@@ -92,9 +92,9 @@ data NeuronType =
       , v_reset :: Float
       , i_offset :: Float
       }
-    deriving (Eq, Show) -- , Typeable, Data, Generic)
+    deriving (Eq, Show)
 
--- Defaults pulled from http://neuralensemble.org/docs/PyNN/standardmodels.html
+-- ^  Defaults taken from http://neuralensemble.org/docs/PyNN/standardmodels.html
 if_cond_exp_default :: NeuronType
 if_cond_exp_default = IFCondExp
   { v_rest = -65.0
@@ -238,11 +238,8 @@ instance FromJSON NeuronType where
                 o .: "v_rest" <*>
                 o .: "v_reset" <*>
                 o .: "i_offset"
-{-- | 
 
-Nodes correspond to the 
-
---}
+-- | A Node is a vertex in the connectivity graph.
 data Node = Population {
         _numNeurons :: Integer,
         _neuronType :: NeuronType,
@@ -267,7 +264,7 @@ data Node = Population {
         _start :: Integer,
         _id :: Int
     }
-    deriving (Eq, Show) -- , Typeable, Data, Generic)
+    deriving (Eq, Show)
 
 instance ToJSON Node where
     toJSON Population{..} = object [
@@ -501,12 +498,12 @@ instance FromJSON ExecutionTarget where
             _ -> error "target not supported yet"
 
 {--
-An execution task specifies all informationn needed to execute a SNN 
+An execution task specifies all information needed to execute a SNN 
 on a specific target.
 --}
 data Task = Task {
-    _executionTarget :: ExecutionTarget, -- ^ Which neuromorphic hardware or simulator to run on.
-    _network :: Network, -- ^ Network that should be implemented.
+    _executionTarget :: ExecutionTarget, -- ^ which neuromorphic hardware or simulator to run on
+    _network :: Network, -- ^ network that should be implemented
     _simulationTime :: Double -- TODO: Might be simulator specific, also has no unit
 } deriving (Eq, Show)
 
@@ -542,7 +539,7 @@ data BlockState = BlockState {
     _nodes :: [Node],
     _edges :: [Edge],
     _outputs :: [Node]
-} deriving (Eq, Show) -- , Typeable, Data, Generic)
+} deriving (Eq, Show)
 
 instance ToJSON BlockState where
     toJSON BlockState {..} = object [

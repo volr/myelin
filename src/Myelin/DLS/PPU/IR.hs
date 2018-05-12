@@ -1,13 +1,17 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, RebindableSyntax #-}
 module Myelin.DLS.PPU.IR where
 
+import Control.Lens
 import Data.Word
 import Myelin.DLS.PPU.Assembler.Monad as M
 import Myelin.DLS.PPU.Assembler as A
+import Prelude
+
+type IRLabel = Int
 
 data Value =
-      V Integer
-    | L Int
+      V Word32
+    | L IRLabel
     deriving (Show)
 
 data IR where
@@ -35,10 +39,10 @@ data IR where
     GreaterEqual :: IR -> IR -> IR
     Abs :: IR -> IR
     Signum :: IR -> IR
-    Select :: IR
+    Select :: IR -> IR -> IR -> IR
     Load :: IR -> IR
     Store :: IR -> IR
-    CCall :: IR -> IR
+    CCall :: IR -> IR -- ^ call a c function
     Upsilon :: IR -> IR
     Phi :: IR
     Branch :: IR
@@ -55,15 +59,30 @@ instance Num IR where
     (-) a b = Sub a b
     abs = Abs
     signum = Signum
-    fromInteger i = Value (V i)
+    fromInteger = Value . V . fromIntegral
 
-genBinOp :: (A.Register -> A.Register -> Bool -> Bool -> M.Asm A.Register) -> IR -> IR -> M.Asm A.Register
+exIR = (12 + 2) * 2 :: IR
+exAsm :: Monad m => M.Asm A.Register m
+exAsm = genAsm exIR
+
+genBinOp :: Monad m => (A.Register -> A.Register -> Bool -> Bool -> M.Asm A.Register m) 
+         -> IR 
+         -> IR 
+         -> M.Asm A.Register m
 genBinOp op a b = do
     a' <- genAsm a
     b' <- genAsm b
     op a' b' False False
 
-genAsm :: IR -> M.Asm A.Register
+genLoadImmediate :: Monad m => Word32 -> M.Asm A.Register m
+genLoadImmediate i = do
+    r <- allocateRegister
+    M.lbz r i
+    return r
+
+genAsm :: Monad m => IR -> M.Asm A.Register m
+genAsm (Value (V i)) = genLoadImmediate i
+genAsm (Value (L i)) = undefined
 genAsm (Add a b) = genBinOp M.add a b
 -- genAsm (Sub a b) = genBinOp M.sub a b
 genAsm (Mul a b) = genBinOp M.mullw a b
@@ -74,3 +93,9 @@ genAsm (BitAnd a b) = undefined
 genAsm (BitOr a b) = undefined
 genAsm (BitXor a b) = undefined
 genAsm (Shl a b) = undefined
+genAsm (Select a b c) = do
+    a' <- genAsm a 
+    b' <- genAsm b
+    c' <- genAsm c 
+    undefined
+

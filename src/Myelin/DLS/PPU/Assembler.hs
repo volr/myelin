@@ -5,77 +5,85 @@ import Data.Int
 import Data.Word
 import Data.Bits
 
-data Register = Register Word32 deriving (Eq, Show)
-encodeRegister (Register r) = r
 
-data VectorRegister = VectorRegister Word32 deriving (Eq, Show)
-encodeVectorRegister (VectorRegister r) = r
+data ScalarType = Byte | Halfword
+data Arithmetic = Saturating| Modulo
 
-r0 = Register 0
-r1 = Register 1
-r2 = Register 2
-r3 = Register 3
-r4 = Register 4
-r5 = Register 5
-r6 = Register 6
-r7 = Register 7
-r8 = Register 8
-r9 = Register 9
-r10 = Register 10
-r11 = Register 11
-r12 = Register 12 
-r13 = Register 13 
-r14 = Register 14
-r15 = Register 15
-r16 = Register 16
-r17 = Register 17
-r18 = Register 18
-r19 = Register 19
-r20 = Register 20
-r21 = Register 21
-r22 = Register 22
-r23 = Register 23
-r24 = Register 24
-r25 = Register 25
-r26 = Register 26
-r27 = Register 27
-r28 = Register 28 
-r29 = Register 29 
-r30 = Register 30
-r31 = Register 31
+data Register = 
+    R0
+    | R1
+    | R2
+    | R3
+    | R4
+    | R5
+    | R6
+    | R7
+    | R8
+    | R9
+    | R10
+    | R11
+    | R12
+    | R13
+    | R14
+    | R15
+    | R16
+    | R17
+    | R18
+    | R19
+    | R20
+    | R21
+    | R22 
+    | R23
+    | R24
+    | R25
+    | R26
+    | R27
+    | R28
+    | R29
+    | R30
+    | R31
+    deriving (Eq, Show, Enum, Ord)
 
-vr0  = VectorRegister 0
-vr1  = VectorRegister 1
-vr2  = VectorRegister 2
-vr3  = VectorRegister 3
-vr4  = VectorRegister 4
-vr5  = VectorRegister 5
-vr6  = VectorRegister 6
-vr7  = VectorRegister 7
-vr8  = VectorRegister 8
-vr9  = VectorRegister 9
-vr10 = VectorRegister 10
-vr11 = VectorRegister 11
-vr12 = VectorRegister 12 
-vr13 = VectorRegister 13 
-vr14 = VectorRegister 14
-vr15 = VectorRegister 15
-vr16 = VectorRegister 16
-vr17 = VectorRegister 17
-vr18 = VectorRegister 18
-vr19 = VectorRegister 19
-vr20 = VectorRegister 20
-vr21 = VectorRegister 21
-vr22 = VectorRegister 22
-vr23 = VectorRegister 23
-vr24 = VectorRegister 24
-vr25 = VectorRegister 25
-vr26 = VectorRegister 26
-vr27 = VectorRegister 27
-vr28 = VectorRegister 28 
-vr29 = VectorRegister 29 
-vr30 = VectorRegister 30
-vr31 = VectorRegister 31
+encodeRegister :: Register -> Word32
+encodeRegister = fromIntegral . fromEnum
+
+data VectorRegister = 
+    VR0
+    | VR1
+    | VR2
+    | VR3
+    | VR4
+    | VR5
+    | VR6
+    | VR7
+    | VR8
+    | VR9
+    | VR10
+    | VR11
+    | VR12
+    | VR13
+    | VR14
+    | VR15
+    | VR16
+    | VR17
+    | VR18
+    | VR19
+    | VR20
+    | VR21
+    | VR22 
+    | VR23
+    | VR24
+    | VR25
+    | VR26
+    | VR27
+    | VR28
+    | VR29
+    | VR30
+    | VR31
+    deriving (Eq, Show, Enum, Ord)
+
+encodeVectorRegister :: VectorRegister -> Word32
+encodeVectorRegister = fromIntegral . fromEnum
 
 data SpecialPurposeRegister = SpecialPurposeRegister Word32 deriving (Eq, Show)
 encodeSpecialPurposeRegister (SpecialPurposeRegister r) = r
@@ -123,7 +131,8 @@ data Opcd =
     | Op_sth         
     | Op_sthu        
     | Op_lmw         
-    | Op_stmw        
+    | Op_stmw       
+    deriving (Eq, Show) 
 
 opcode Op_null        = 0
 opcode Op_twi         = 3
@@ -263,6 +272,7 @@ data X_opcd =
     | Xop_srawi  
     | Xop_extsh  
     | Xop_extsb 
+    deriving (Eq, Show)
 
 x_opcd :: X_opcd -> Word32
 x_opcd Xop_cmp     =   0
@@ -390,7 +400,8 @@ data Xo_opcd =
     | Xop_mullw 
     | Xop_add   
     | Xop_divwu 
-    | Xop_divw  
+    | Xop_divw 
+    deriving (Eq, Show) 
 
 xo_opcd :: Xo_opcd -> Word32
 xo_opcd Xop_subfc  =   8
@@ -442,6 +453,7 @@ data Xl_opcd =
     | Xxop_crorc  
     | Xxop_cror   
     | Xxop_bcctr  
+    deriving (Eq, Show)
 
 xl_opcd Xxop_mcrf   =   0
 xl_opcd Xxop_bclr   =  16
@@ -478,6 +490,7 @@ data Xfx_opcd =
     | Xop_mtocrf
     | Xop_mfspr 
     | Xop_mtspr 
+    deriving (Eq, Show)
 
 xfx_opcd Xop_mfocrf = 19
 xfx_opcd Xop_mtocrf = 144
@@ -490,60 +503,60 @@ mfspr  rt spr = XFX Op_alu_xo rt spr Xop_mfspr
 mtspr  rt spr = XFX Op_alu_xo rt spr Xop_mtspr
 
 data Fxv_opcd = 
-    Xop_fxvmahm         -- fixed-vector-multiply-accumulate-halfword-modulo
-    | Xop_fxvmabm       -- fixed-vector-multiply-accumulate-byte-modulo
-    | Xop_fxvmtacb      -- fixed-vector-move-to-accumulator-byte
-    | Xop_fxvmtach      -- fixed-vector-move-to-accumulator-halfword
-    | Xop_fxvmahfs      -- fixed-vector-multiply-accumulate-halfword-fractional-saturating
-    | Xop_fxvmabfs      -- fixed-vector-multiply-accumulate-byte-fractional-saturating
-    | Xop_fxvmtacbf     -- fixed-vector-move-to-accumulator-byte-fractional
-    | Xop_fxvmtachf     -- fixed-vector-move-to-accumulator-halfword-fractional
-    | Xop_fxvmatachm    -- fixed-vector-multiply-accumulate-to-accumulator-halfword-modulo
-    | Xop_fxvmatacbm    -- fixed-vector-multiply-accumulate-save-to-accumulator-byte-modulo
-    | Xop_fxvmatachfs   -- fixed-vector-multiply-accumulate-and-save-to-accumulator-halfword-fractional-saturating
-    | Xop_fxvmatacbfs   -- fixed-vector-multiply-accumulate-and-save-to-accumulator-byte-fractional-saturating
-    | Xop_fxvmulhm      -- fixed-vector-multiply-halfword-modulo
-    | Xop_fxvmulbm      -- fixed-vector-multiply-byte-modulo
-    | Xop_fxvmulhfs     -- fixed-vector-multiply-halfword-fractional-saturating
-    | Xop_fxvmulbfs     -- fixed-vector-multiply-byte-fractional-saturating
-    | Xop_fxvmultachm   -- fixed-vector-multiply-save-to-accumulator-halfword-modulo
-    | Xop_fxvmultacbm   -- fixed-vector-multiply-save-to-accumulator-byte-modulo
-    | Xop_fxvmultachfs  -- fixed-vector-multiply-save-to-accumulator-halfword-fractional-saturating
-    | Xop_fxvmultacbfs  -- fixed-vector-multiply-save-to-accumulator-byte-fractional-saturating
-    | Xop_fxvinx        -- fixed-vector-in-indexed
-    | Xop_fxvpckbu      -- fixed-vector-pack-byte-upper
-    | Xop_fxvoutx       -- fixed-vector-out-indexed
-    | Xop_fxvpckbl      -- fixed-vector-pack-byte-lower
-    | Xop_fxvsplath     -- fixed-vector-splat-halfword
-    | Xop_fxvsplatb     -- fixed-vector-splat-byte
-    | Xop_fxvupckbr     -- fixed-vector-unpack-byte-right
-    | Xop_fxvupckbl     -- fixed-vector-unpack-byte-left
-    | Xop_fxvcmph       -- fixed-vector-compare-halfword
-    | Xop_fxvcmpb       -- fixed-vector-compare-byte
-    | Xop_fxvshh        -- fixed-vector-shift-halfword
-    | Xop_fxvshb        -- fixed-vector-shift-byte
-    | Xop_fxvsel        -- fixed-vector-select
-    | Xop_fxvsubhm      -- fixed-vector-subtract-halfword-modulo
-    | Xop_fxvsubbm      -- fixed-vector-subtract-byte-modulo
-    | Xop_fxvsubhfs     -- fixed-vector-subtract-halfword-fractional-saturating
-    | Xop_fxvsubbfs     -- fixed-vector-subtract-byte-fractional-saturating
-    | Xop_fxvaddactachm -- fixed-vector-add-accumulator-save-to-accumulator-halfword-modulo
-    | Xop_fxvaddactacb  -- fixed-vector-add-accumulator-save-to-accumulator-byte
-    | Xop_fxvaddactachf -- fixed-vector-add-accumulator-save-to-accumulator-halfword-fractional
-    | Xop_fxvaddactacbf -- fixed-vector-add-accumulator-save-to-accumulator-byte-fractional
-    | Xop_fxvaddachm    -- fixed-vector-add-accumulator-halfword-modulo
-    | Xop_fxvaddacbm    -- fixed-vector-add-accumulator-byte-modulo
-    | Xop_fxvaddachfs   -- fixed-vector-add-accumulator-halfword-fractional-saturating
-    | Xop_fxvaddacbfs   -- fixed-vector-add-accumulator-byte-fractional-saturating
-    | Xop_fxvaddtachm   -- fixed-vector-add-and-save-to-accumulator-halfword-modulo
-    | Xop_fxvaddtacb    -- fixed-vector-add-and-save-to-accumulator-byte-modulo
-    | Xop_fxvaddhm      -- fixed-vector-add-halfword-modulo
-    | Xop_fxvaddbm      -- fixed-vector-add-byte-modulo
-    | Xop_fxvaddhfs     -- fixed-vector-add-halfword-fractional-saturating
-    | Xop_fxvaddbfs     -- fixed-vector-add-byte-fractional-saturating
-    | Xop_fxvlax        -- fixed-vector-load-array-indexed
-    | Xop_fxvstax       -- fixed-vector-store-array-indexed
-
+    Xop_fxvmahm         -- ^ fixed-vector-multiply-accumulate-halfword-modulo
+    | Xop_fxvmabm       -- ^ fixed-vector-multiply-accumulate-byte-modulo
+    | Xop_fxvmtacb      -- ^ fixed-vector-move-to-accumulator-byte
+    | Xop_fxvmtach      -- ^ fixed-vector-move-to-accumulator-halfword
+    | Xop_fxvmahfs      -- ^ fixed-vector-multiply-accumulate-halfword-fractional-saturating
+    | Xop_fxvmabfs      -- ^ fixed-vector-multiply-accumulate-byte-fractional-saturating
+    | Xop_fxvmtacbf     -- ^ fixed-vector-move-to-accumulator-byte-fractional
+    | Xop_fxvmtachf     -- ^ fixed-vector-move-to-accumulator-halfword-fractional
+    | Xop_fxvmatachm    -- ^ fixed-vector-multiply-accumulate-to-accumulator-halfword-modulo
+    | Xop_fxvmatacbm    -- ^ fixed-vector-multiply-accumulate-save-to-accumulator-byte-modulo
+    | Xop_fxvmatachfs   -- ^ fixed-vector-multiply-accumulate-and-save-to-accumulator-halfword-fractional-saturating
+    | Xop_fxvmatacbfs   -- ^ fixed-vector-multiply-accumulate-and-save-to-accumulator-byte-fractional-saturating
+    | Xop_fxvmulhm      -- ^ fixed-vector-multiply-halfword-modulo
+    | Xop_fxvmulbm      -- ^ fixed-vector-multiply-byte-modulo
+    | Xop_fxvmulhfs     -- ^ fixed-vector-multiply-halfword-fractional-saturating
+    | Xop_fxvmulbfs     -- ^ fixed-vector-multiply-byte-fractional-saturating
+    | Xop_fxvmultachm   -- ^ fixed-vector-multiply-save-to-accumulator-halfword-modulo
+    | Xop_fxvmultacbm   -- ^ fixed-vector-multiply-save-to-accumulator-byte-modulo
+    | Xop_fxvmultachfs  -- ^ fixed-vector-multiply-save-to-accumulator-halfword-fractional-saturating
+    | Xop_fxvmultacbfs  -- ^ fixed-vector-multiply-save-to-accumulator-byte-fractional-saturating
+    | Xop_fxvinx        -- ^ fixed-vector-in-indexed
+    | Xop_fxvpckbu      -- ^ fixed-vector-pack-byte-upper
+    | Xop_fxvoutx       -- ^ fixed-vector-out-indexed
+    | Xop_fxvpckbl      -- ^ fixed-vector-pack-byte-lower
+    | Xop_fxvsplath     -- ^ fixed-vector-splat-halfword
+    | Xop_fxvsplatb     -- ^ fixed-vector-splat-byte
+    | Xop_fxvupckbr     -- ^ fixed-vector-unpack-byte-right
+    | Xop_fxvupckbl     -- ^ fixed-vector-unpack-byte-left
+    | Xop_fxvcmph       -- ^ fixed-vector-compare-halfword
+    | Xop_fxvcmpb       -- ^ fixed-vector-compare-byte
+    | Xop_fxvshh        -- ^ fixed-vector-shift-halfword
+    | Xop_fxvshb        -- ^ fixed-vector-shift-byte
+    | Xop_fxvsel        -- ^ fixed-vector-select
+    | Xop_fxvsubhm      -- ^ fixed-vector-subtract-halfword-modulo
+    | Xop_fxvsubbm      -- ^ fixed-vector-subtract-byte-modulo
+    | Xop_fxvsubhfs     -- ^ fixed-vector-subtract-halfword-fractional-saturating
+    | Xop_fxvsubbfs     -- ^ fixed-vector-subtract-byte-fractional-saturating
+    | Xop_fxvaddactachm -- ^ fixed-vector-add-accumulator-save-to-accumulator-halfword-modulo
+    | Xop_fxvaddactacb  -- ^ fixed-vector-add-accumulator-save-to-accumulator-byte
+    | Xop_fxvaddactachf -- ^ fixed-vector-add-accumulator-save-to-accumulator-halfword-fractional
+    | Xop_fxvaddactacbf -- ^ fixed-vector-add-accumulator-save-to-accumulator-byte-fractional
+    | Xop_fxvaddachm    -- ^ fixed-vector-add-accumulator-halfword-modulo
+    | Xop_fxvaddacbm    -- ^ fixed-vector-add-accumulator-byte-modulo
+    | Xop_fxvaddachfs   -- ^ fixed-vector-add-accumulator-halfword-fractional-saturating
+    | Xop_fxvaddacbfs   -- ^ fixed-vector-add-accumulator-byte-fractional-saturating
+    | Xop_fxvaddtachm   -- ^ fixed-vector-add-and-save-to-accumulator-halfword-modulo
+    | Xop_fxvaddtacb    -- ^ fixed-vector-add-and-save-to-accumulator-byte-modulo
+    | Xop_fxvaddhm      -- ^ fixed-vector-add-halfword-modulo
+    | Xop_fxvaddbm      -- ^ fixed-vector-add-byte-modulo
+    | Xop_fxvaddhfs     -- ^ fixed-vector-add-halfword-fractional-saturating
+    | Xop_fxvaddbfs     -- ^ fixed-vector-add-byte-fractional-saturating
+    | Xop_fxvlax        -- ^ fixed-vector-load-array-indexed
+    | Xop_fxvstax       -- ^ fixed-vector-store-array-indexed
+    deriving (Eq, Show)
 
 fxv_opcd Xop_fxvmahm       =  12
 fxv_opcd Xop_fxvmabm       =  13
@@ -604,6 +617,7 @@ data Fxv_cond =
     | Fxv_cond_gt
     | Fxv_cond_lt
     | Fxv_cond_eq
+    deriving (Eq, Show)
 
 fxv_cond cond = case cond of
     Fxv_cond_null -> 0
@@ -635,8 +649,8 @@ fxvinx        rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvinx
 fxvpckbu      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbu      cond
 fxvoutx       rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvoutx
 fxvpckbl      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbl      cond
-fxvsplath     rt ra         = FXVS Op_nve_xo rt ra (Register 0) Xop_fxvsplath
-fxvsplatb     rt ra         = FXVS Op_nve_xo rt ra (Register 0) Xop_fxvsplatb
+fxvsplath     rt ra         = FXVS Op_nve_xo rt ra R0 Xop_fxvsplath
+fxvsplatb     rt ra         = FXVS Op_nve_xo rt ra R0 Xop_fxvsplatb
 fxvupckbr     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbr     cond
 fxvupckbl     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbl     cond
 fxvcmph       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmph       cond
@@ -745,7 +759,7 @@ data Inst =
         _ra :: Register,
         _rb :: Register,
         _fxv :: Fxv_opcd
-    }
+    } deriving (Eq, Show)
 
 encode :: Inst -> Word32
 encode inst = case inst of
@@ -805,3 +819,15 @@ encode inst = case inst of
           .|. (encodeRegister _rb `shift` 16)
           .|. (fxv_opcd _fxv `shift` 21)
 
+assembleInstruction :: Inst -> String
+assembleInstruction inst = case inst of
+    I {..} -> ""
+    B {..} -> ""
+    D {..} -> ""
+    XO {..} -> ""
+    X {..} -> ""
+    M {..} -> ""
+    XFX {..} -> ""
+    XL {..} -> ""
+    FXV {..} -> ""
+    FXVS {..} -> ""
