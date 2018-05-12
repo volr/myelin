@@ -33,6 +33,7 @@ dependencies:
 - aeson-pretty
 - bytestring
 - process
+- containers
 
 library:
   source-dirs: src
