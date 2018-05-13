@@ -2,6 +2,7 @@ module Myelin.Examples where
 
 import Myelin.SNN
 
+
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1, 2, 3, 5]
@@ -14,3 +15,12 @@ net = do
     projection (AllToAll 1.0 False) (Static Excitatory) c a
     output <- fileOutput "out.txt"
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
+
+
+net2 :: Monad m => SNN () m
+net2 = do
+    input <- spikeSourceArray spikeTimes
+    cells <- population 20 if_cond_alpha_default "cells" True
+    projection (FixedProbability 0.5) (Static Excitatory) input cells
+    where spikeTimes = undefined
+                            

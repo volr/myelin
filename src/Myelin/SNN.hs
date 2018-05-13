@@ -47,6 +47,23 @@ Things that can be improved:
   and finite (much coarser than floating point) precision
   in parameter adjustment.
 
+TODO:
+
+IF_cond_alpha
+HH_cond_exp
+IF_curr_exp
+IF_cond_exp
+EIF_cond_exp_isfa_ista
+IF_cond_exp_gsfa_grr
+Izhikevich
+GIF_cond_exp
+EIF_cond_alpha_isfa_ista
+IF_curr_alpha
+
+SpikeSourceGamma
+SpikeSourceArray
+SpikeSourcePoisson
+SpikeSourcePoissonRefractory
 --}
 data NeuronType =
     IFCurrentAlpha {
@@ -58,6 +75,19 @@ data NeuronType =
         cm :: Float, -- ^ Membrane capactitance
         v_reset :: Float, -- ^ Reset potential 
         tau_syn_I :: Float, -- ^ Inhibitory synaptic time constant
+        i_offset :: Float -- ^ Offset current
+    }
+    | IFCondAlpha {
+        v_rest :: Float, -- ^ Resting membrane potential
+        cm :: Float, -- ^ Capacity of the membrane
+        tau_m :: Float, -- ^ Membrane time constant
+        tau_refrac :: Float, -- ^ Duration of refractory period
+        tau_syn_E :: Float, -- ^ Rise time of the excitatory synaptic alpha function
+        tau_syn_I :: Float, -- ^ Rise time of the inhibitory synaptic alpha function
+        e_rev_E :: Float, -- ^ Reversal potential for excitatory input
+        e_rev_I :: Float, -- ^ Reversal potential for inhibitory input
+        v_thresh :: Float, -- ^ Spike threshold
+        v_reset :: Float, -- ^ Reset potential after a spike
         i_offset :: Float -- ^ Offset current
     }
     | IFSpikey {
@@ -92,7 +122,39 @@ data NeuronType =
       , v_reset :: Float
       , i_offset :: Float
       }
-    deriving (Eq, Show)
+    | EIFCondAlpha {
+        cm :: Float, -- ^ capacity of the membrane
+        tau_refrac :: Float, -- ^ duration of the refractory period
+        v_spike :: Float, -- ^ spike detection threshold
+        v_reset :: Float, -- ^ reset value for membrane potential after a spike
+        v_rest :: Float, -- ^ resting membrane potential (Leak reversal potential)
+        tau_m :: Float, -- ^ membrane time constant
+        i_offset :: Float, -- ^ offset current
+        a :: Float, -- ^ subthreshold adaptation conductance
+        b :: Float, -- ^ spike-triggered adaptation
+        delta_T :: Float, -- ^ slope factor
+        tau_w :: Float, -- ^ adaptation time constant
+        v_thresh :: Float, -- ^ spike initiation threshold
+        e_rev_E :: Float, -- ^ excitatory reversal potential
+        tau_syn_E :: Float, -- ^ rise time of excitatory synaptic conductance (alpha function)
+        e_rev_I :: Float, -- ^ inhibitory reversal potential
+        tau_syn_I :: Float -- ^ rise time of the inhibitory synaptic conductance (alpha function)
+        }
+    | HHCondExp {
+        cm :: Float,
+        e_rev_E :: Float,
+        e_rev_I :: Float,
+        e_rev_K :: Float,
+        e_rev_Na :: Float,
+        e_rev_leak :: Float,
+        g_leak :: Float,
+        gbar_K :: Float,
+        gbar_Na :: Float,
+        i_offset :: Float,
+        tau_syn_E :: Float,
+        tau_syn_I :: Float,
+        v_offset :: Float
+    } deriving (Eq, Show)
 
 -- ^  Defaults taken from http://neuralensemble.org/docs/PyNN/standardmodels.html
 if_cond_exp_default :: NeuronType
@@ -119,6 +181,21 @@ if_current_alpha_default = IFCurrentAlpha {
     tau_syn_I = 5.0,
     v_rest = -65.0,
     cm = 1.0,
+    v_reset = -65.0,
+    i_offset = 0.0
+}
+
+if_cond_alpha_default :: NeuronType
+if_cond_alpha_default = IFCondAlpha {
+    v_rest = -65.0,
+    cm = 1.0,
+    tau_m = 20.0,
+    tau_refrac = 0.0,
+    tau_syn_E = 5.0,
+    tau_syn_I = 5.0,
+    e_rev_E = 0.0,
+    e_rev_I = -70.0,
+    v_thresh = -50.0,
     v_reset = -65.0,
     i_offset = 0.0
 }
@@ -173,6 +250,20 @@ instance ToJSON NeuronType where
             "tau_syn_I" .= tau_syn_I,
             "i_offset" .= i_offset
         ]
+    toJSON IFCondAlpha {..} = object [
+            "type" .= ("IFCondAlpha" :: String),
+            "v_rest" .= v_rest,
+            "cm" .= cm,
+            "tau_m" .= tau_m,
+            "tau_refrac" .= tau_refrac,
+            "tau_syn_E" .= tau_syn_E,
+            "tau_syn_I" .= tau_syn_I,
+            "e_rev_E" .= e_rev_E,
+            "e_rev_I" .= e_rev_I,
+            "v_thresh" .= v_thresh,
+            "v_reset" .= v_reset,
+            "i_offset" .= i_offset
+        ]
     toJSON IFSpikey {..} = object [
             "type" .= ("IFSpikey" :: String),
             "e_rev_I" .= e_rev_I,
@@ -220,6 +311,18 @@ instance FromJSON NeuronType where
                 o .: "cm" <*>
                 o .: "v_reset" <*>
                 o .: "tau_syn_I" <*>
+                o .: "i_offset"
+            "IFCondAlpha" -> IFCondAlpha <$>
+                o .: "v_rest" <*>
+                o .: "cm" <*>
+                o .: "tau_m" <*>
+                o .: "tau_refrac" <*>
+                o .: "tau_syn_E" <*>
+                o .: "tau_syn_I" <*>
+                o .: "e_rev_E" <*>
+                o .: "e_rev_I" <*>
+                o .: "v_thresh" <*>
+                o .: "v_reset" <*>
                 o .: "i_offset"
             "IFSpikey" -> IFSpikey <$>
                 o .: "e_rev_I" <*>
@@ -327,6 +430,7 @@ instance FromJSON Node where
                     o .: "id"
 
 type Weight = Float -- TODO: This is platform specific
+type Probability = Float -- TODO: Very unsophisticated representation
 
 {--
 
@@ -350,7 +454,7 @@ are backend specific connectors.
 data ProjectionType =
     AllToAll {
         _weight :: Weight,
-        _allow_self_connections :: Bool
+        _allow_self_connections :: Bool -- TODO
     }
     | OneToOne {
         _weight :: Weight
@@ -368,6 +472,9 @@ data ProjectionType =
     | FromList {
         _weights :: [(Int, Int, Weight)]
     }
+    | FixedProbability {
+        _probability :: Probability
+    }
     deriving (Eq, Show)
 
 instance FromJSON ProjectionType where
@@ -379,6 +486,7 @@ instance FromJSON ProjectionType where
             "fixed_number_pre" -> FixedNumberPre <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
             "fixed_number_post" -> FixedNumberPost <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
             "from_list" -> FromList <$> o .: "weights"
+            "fixed_probability" -> FixedProbability <$> o .: "probability"
 
 instance ToJSON ProjectionType where
     toJSON AllToAll{..} = object [
@@ -405,6 +513,10 @@ instance ToJSON ProjectionType where
     toJSON FromList{..} = object [
             "kind" .= ("from_list" :: String),
             "weights" .= _weights
+        ]
+    toJSON FixedProbability{..} = object [
+            "kind" .= ("fixed_probability" :: String),
+            "probability" .= _probability
         ]
 
 data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)
@@ -466,13 +578,14 @@ data ExecutionTarget =
         _maxTimestep :: Float
     }
     | BrainScaleS {
-        _wafer :: Int,
-        _hicann :: Int
-    }
+        _wafer :: Int, -- ^ wafer to run the experiment on
+        _hicann :: Int -- ^ hicann chip to use
+    } -- ^ first generation (wafer) brainscales system
     | Spikey {
         _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
-    }
-    | SpiNNaker
+    } 
+    | SpiNNaker -- ^ SpiNNaker neuromorphic platform
+    | BrainScaleS2 -- ^ second generation brainscales system
     deriving (Eq, Show)
 
 instance ToJSON ExecutionTarget where
