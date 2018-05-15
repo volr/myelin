@@ -21,3 +21,8 @@ To use it source the file
 . nest-master/bin/nest_vars.sh
 ```
 
+To make use of music, the music binary needs to be in your path:
+
+```
+export PATH=$PWD/music-master/bin:$PATH
+```
