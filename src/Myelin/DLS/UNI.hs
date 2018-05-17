@@ -1,12 +1,10 @@
-{-# LANGUAGE DeriveFunctor, PatternGuards #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable #-}
 module Myelin.DLS.UNI where
 
 import Data.Word
 import Data.Bits
 import Data.Monoid
 import Data.ByteString.Builder
-
-import Control.Applicative
 
 -- very preliminary type definitions
 type OmnibusValue = Word32
@@ -17,7 +15,7 @@ data Term a =
     Seq [Term a]
   | Par [Term a]
   | P a
-  deriving (Eq, Show, Functor)
+  deriving (Eq, Show, Functor, Foldable)
 
 instance Monoid (Term a) where
   mappend (Seq a) (Seq b) = Seq (a <> b)
@@ -42,19 +40,19 @@ infixl 7 <|>
 (<|>) = pmappend
 
 data Primitive = 
-      WaitFor7 !Word8 -- ^
-    | WaitFor16 !Word16 -- ^
-    | WaitFor32 !Word32 -- ^
-    | WaitUntil !Word64 -- ^
-    | SetTime !Word64 -- ^ 
-    | Fire !Word32 !Word8 -- ^ send several spike events to the chip
-    | FireOne !Word8 -- ^ send one spike event to the chip
-    | Write !OmnibusAddress !OmnibusValue -- ^ write to the specified omnibus address
-    | Read !OmnibusAddress -- ^ read from the specified omnibus address 
-    | Halt -- ^ halt program execution
-    | RecStart -- ^ start recording chip answers (spikes and read responses)
-    | RecStop -- ^ stop recortding chip answers (spikes and read responses)
-    deriving (Eq, Show)
+    WaitFor7 !Word8 -- ^
+  | WaitFor16 !Word16 -- ^
+  | WaitFor32 !Word32 -- ^
+  | WaitUntil !Word64 -- ^
+  | SetTime !Word64 -- ^ 
+  | Fire !Word32 !Word8 -- ^ send several spike events to the chip
+  | FireOne !Word8 -- ^ send one spike event to the chip
+  | Write !OmnibusAddress !OmnibusValue -- ^ write to the specified omnibus address
+  | Read !OmnibusAddress -- ^ read from the specified omnibus address 
+  | Halt -- ^ halt program execution
+  | RecStart -- ^ start recording chip answers (spikes and read responses)
+  | RecStop -- ^ stop recortding chip answers (spikes and read responses)
+  deriving (Eq, Show)
 
 waitFor :: Time -> Term Primitive
 waitFor t | t < 2^7 = P (WaitFor7 (fromIntegral t))
@@ -104,6 +102,12 @@ opcode RecStop = 0x0d
 opcode (Fire _ _) = 0x0f
 opcode (FireOne _) = 0x40
 
+timeDelta :: Primitive -> Word64
+timeDelta (WaitFor32 t) = fromIntegral t
+timeDelta (WaitFor16 t) = fromIntegral t
+timeDelta (WaitFor7 t) = fromIntegral t
+timeDelta _ = 0
+
 -- ^ use a bytestring builder to encode
 encodePrimitive :: Primitive -> Builder
 encodePrimitive op@(SetTime t) = word8 (opcode op) <> word64LE t
@@ -119,4 +123,7 @@ encodePrimitive Halt = word8 (opcode Halt)
 encodePrimitive RecStart = word8 (opcode RecStart)
 encodePrimitive RecStop = word8 (opcode RecStop)
 
-
+uniEx = setTime 0 <> 
+      (fireOne 12 <> waitFor 100 <> fireOne 12 <> waitFor 122) 
+  <|> (fireOne 2 <> waitFor 120 <> fireOne 13 <> waitFor 150)
+  <> halt

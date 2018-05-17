@@ -1,10 +1,10 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Myelin.DLS.PPU.Assembler where
 
 import Data.Int
 import Data.Word
 import Data.Bits
-
+import Data.ByteString.Builder
 
 data ScalarType = Byte | Halfword
 data Arithmetic = Saturating| Modulo
@@ -330,59 +330,59 @@ x_opcd Xop_extsh   = 922
 x_opcd Xop_extsb   = 954
 
 -- c.f. p. 193-197
-cmp     rt ra rb rc = X Op_alu_xo rt ra rb Xop_cmp     rc 
-tw      rt ra rb rc = X Op_alu_xo rt ra rb Xop_tw      rc 
-lwzx    rt ra rb rc = X Op_alu_xo rt ra rb Xop_lwzx    rc 
-slw     rt ra rb rc = X Op_alu_xo rt ra rb Xop_slw     rc 
-cntlzw  rt ra rb rc = X Op_alu_xo rt ra rb Xop_cntlzw  rc 
-and     rt ra rb rc = X Op_alu_xo rt ra rb Xop_and     rc 
-cmpl    rt ra rb rc = X Op_alu_xo rt ra rb Xop_cmpl    rc 
-nvem    rt ra rb rc = X Op_alu_xo rt ra rb Xop_nvem    rc 
-nves    rt ra rb rc = X Op_alu_xo rt ra rb Xop_nves    rc 
-nvemtl  rt ra rb rc = X Op_alu_xo rt ra rb Xop_nvemtl  rc 
-lwzux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_lwzux   rc 
-andc    rt ra rb rc = X Op_alu_xo rt ra rb Xop_andc    rc 
-wait    rt ra rb rc = X Op_alu_xo rt ra rb Xop_wait    rc 
-mfmsr   rt ra rb rc = X Op_alu_xo rt ra rb Xop_mfmsr   rc 
-lbzx    rt ra rb rc = X Op_alu_xo rt ra rb Xop_lbzx    rc 
-lbzux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_lbzux   rc 
-popcb   rt ra rb rc = X Op_alu_xo rt ra rb Xop_popcb   rc 
-nor     rt ra rb rc = X Op_alu_xo rt ra rb Xop_nor     rc 
-mtmsr   rt ra rb rc = X Op_alu_xo rt ra rb Xop_mtmsr   rc 
-stwx    rt ra rb rc = X Op_alu_xo rt ra rb Xop_stwx    rc 
-prtyw   rt ra rb rc = X Op_alu_xo rt ra rb Xop_prtyw   rc 
-stwux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_stwux   rc 
-stbx    rt ra rb rc = X Op_alu_xo rt ra rb Xop_stbx    rc 
-stbux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_stbux   rc 
-lhzx    rt ra rb rc = X Op_alu_xo rt ra rb Xop_lhzx    rc 
-eqv     rt ra rb rc = X Op_alu_xo rt ra rb Xop_eqv     rc 
-eciwx   rt ra rb rc = X Op_alu_xo rt ra rb Xop_eciwx   rc 
-lhzux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_lhzux   rc 
-xor     rt ra rb rc = X Op_alu_xo rt ra rb Xop_xor     rc 
-lhax    rt ra rb rc = X Op_alu_xo rt ra rb Xop_lhax    rc 
-lhaux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_lhaux   rc 
-sthx    rt ra rb rc = X Op_alu_xo rt ra rb Xop_sthx    rc 
-orc     rt ra rb rc = X Op_alu_xo rt ra rb Xop_orc     rc 
-ecowx   rt ra rb rc = X Op_alu_xo rt ra rb Xop_ecowx   rc 
-sthux   rt ra rb rc = X Op_alu_xo rt ra rb Xop_sthux   rc 
-or      rt ra rb rc = X Op_alu_xo rt ra rb Xop_or      rc 
-nand    rt ra rb rc = X Op_alu_xo rt ra rb Xop_nand    rc 
-srw     rt ra rb rc = X Op_alu_xo rt ra rb Xop_srw     rc 
-sync    rt ra rb rc = X Op_alu_xo rt ra rb Xop_sync    rc 
-synm    rt ra rb rc = X Op_alu_xo rt ra rb Xop_synm    rc 
-syns    rt ra rb rc = X Op_alu_xo rt ra rb Xop_syns    rc 
-synmtl  rt ra rb rc = X Op_alu_xo rt ra rb Xop_synmtl  rc 
-synmtvr rt ra rb rc = X Op_alu_xo rt ra rb Xop_synmtvr rc 
-synmfvr rt ra rb rc = X Op_alu_xo rt ra rb Xop_synmfvr rc 
-synmtp  rt ra rb rc = X Op_alu_xo rt ra rb Xop_synmtp  rc 
-synmfp  rt ra rb rc = X Op_alu_xo rt ra rb Xop_synmfp  rc 
-synmvvr rt ra rb rc = X Op_alu_xo rt ra rb Xop_synmvvr rc 
-synops  rt ra rb rc = X Op_alu_xo rt ra rb Xop_synops  rc 
-synswp  rt ra rb rc = X Op_alu_xo rt ra rb Xop_synswp  rc 
-sraw    rt ra rb rc = X Op_alu_xo rt ra rb Xop_sraw    rc 
-srawi   rt ra rb rc = X Op_alu_xo rt ra rb Xop_srawi   rc 
-extsh   rt ra rb rc = X Op_alu_xo rt ra rb Xop_extsh   rc 
-extsb  rt ra rb rc  = X Op_alu_xo rt ra rb Xop_extsb   rc 
+cmp     rt ra rb = X Op_alu_xo rt ra rb Xop_cmp     
+tw      rt ra rb = X Op_alu_xo rt ra rb Xop_tw      
+lwzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lwzx    
+slw     rt ra rb = X Op_alu_xo rt ra rb Xop_slw     
+cntlzw  rt ra rb = X Op_alu_xo rt ra rb Xop_cntlzw  
+and     rt ra rb = X Op_alu_xo rt ra rb Xop_and     
+cmpl    rt ra rb = X Op_alu_xo rt ra rb Xop_cmpl    
+nvem    rt ra rb = X Op_alu_xo rt ra rb Xop_nvem    
+nves    rt ra rb = X Op_alu_xo rt ra rb Xop_nves    
+nvemtl  rt ra rb = X Op_alu_xo rt ra rb Xop_nvemtl  
+lwzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lwzux   
+andc    rt ra rb = X Op_alu_xo rt ra rb Xop_andc    
+wait    rt ra rb = X Op_alu_xo rt ra rb Xop_wait    
+mfmsr   rt ra rb = X Op_alu_xo rt ra rb Xop_mfmsr   
+lbzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lbzx    
+lbzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lbzux   
+popcb   rt ra rb = X Op_alu_xo rt ra rb Xop_popcb   
+nor     rt ra rb = X Op_alu_xo rt ra rb Xop_nor     
+mtmsr   rt ra rb = X Op_alu_xo rt ra rb Xop_mtmsr   
+stwx    rt ra rb = X Op_alu_xo rt ra rb Xop_stwx    
+prtyw   rt ra rb = X Op_alu_xo rt ra rb Xop_prtyw   
+stwux   rt ra rb = X Op_alu_xo rt ra rb Xop_stwux   
+stbx    rt ra rb = X Op_alu_xo rt ra rb Xop_stbx    
+stbux   rt ra rb = X Op_alu_xo rt ra rb Xop_stbux   
+lhzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lhzx    
+eqv     rt ra rb = X Op_alu_xo rt ra rb Xop_eqv     
+eciwx   rt ra rb = X Op_alu_xo rt ra rb Xop_eciwx   
+lhzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lhzux   
+xor     rt ra rb = X Op_alu_xo rt ra rb Xop_xor     
+lhax    rt ra rb = X Op_alu_xo rt ra rb Xop_lhax    
+lhaux   rt ra rb = X Op_alu_xo rt ra rb Xop_lhaux   
+sthx    rt ra rb = X Op_alu_xo rt ra rb Xop_sthx    
+orc     rt ra rb = X Op_alu_xo rt ra rb Xop_orc     
+ecowx   rt ra rb = X Op_alu_xo rt ra rb Xop_ecowx   
+sthux   rt ra rb = X Op_alu_xo rt ra rb Xop_sthux   
+or      rt ra rb = X Op_alu_xo rt ra rb Xop_or      
+nand    rt ra rb = X Op_alu_xo rt ra rb Xop_nand    
+srw     rt ra rb = X Op_alu_xo rt ra rb Xop_srw     
+sync    rt ra rb = X Op_alu_xo rt ra rb Xop_sync    
+synm    rt ra rb = X Op_alu_xo rt ra rb Xop_synm    
+syns    rt ra rb = X Op_alu_xo rt ra rb Xop_syns    
+synmtl  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtl  
+synmtvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmtvr 
+synmfvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmfvr 
+synmtp  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtp  
+synmfp  rt ra rb = X Op_alu_xo rt ra rb Xop_synmfp  
+synmvvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmvvr 
+synops  rt ra rb = X Op_alu_xo rt ra rb Xop_synops  
+synswp  rt ra rb = X Op_alu_xo rt ra rb Xop_synswp  
+sraw    rt ra rb = X Op_alu_xo rt ra rb Xop_sraw    
+srawi   rt ra rb = X Op_alu_xo rt ra rb Xop_srawi   
+extsh   rt ra rb = X Op_alu_xo rt ra rb Xop_extsh   
+extsb   rt ra rb = X Op_alu_xo rt ra rb Xop_extsb   
 
 data Xo_opcd = 
     Xop_subfc   
@@ -421,22 +421,22 @@ xo_opcd Xop_add    = 266
 xo_opcd Xop_divwu  = 459
 xo_opcd Xop_divw   = 491
 
-subfc  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_subfc  rc 
-addc   rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_addc   rc 
-mulhwu rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_mulhwu rc 
-subf   rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_subf   rc 
-mulhw  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_mulhw  rc 
-neg    rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_neg    rc 
-subfe  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_subfe  rc 
-adde   rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_adde   rc 
-subfze rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_subfze rc 
-addze  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_addze  rc 
-subfme rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_subfme rc 
-addme  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_addme  rc 
-mullw  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_mullw  rc 
-add    rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_add    rc 
-divwu  rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_divwu  rc 
-divw   rt ra rb oe rc = XO Op_alu_xo rt ra rb oe Xop_divw   rc 
+subfc  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfc  
+addc   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addc   
+mulhwu rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mulhwu 
+subf   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subf   
+mulhw  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mulhw  
+neg    rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_neg    
+subfe  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfe  
+adde   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_adde   
+subfze rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfze 
+addze  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addze  
+subfme rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfme 
+addme  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addme  
+mullw  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mullw  
+add    rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_add    
+divwu  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_divwu  
+divw   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_divw   
 
 data Xl_opcd = 
     Xxop_mcrf     
@@ -470,20 +470,20 @@ xl_opcd Xxop_crorc  = 417
 xl_opcd Xxop_cror   = 449
 xl_opcd Xxop_bcctr  = 528
 
-mcrf   bt ba bb lk = XL Op_bclr bt ba bb Xxop_mcrf lk
-bclr   bt ba bb lk = XL Op_bclr bt ba bb Xxop_bclr lk
-crnor  bt ba bb lk = XL Op_bclr bt ba bb Xxop_crnor lk
-rfmci  bt ba bb lk = XL Op_bclr bt ba bb Xxop_rfmci lk
-rfi    bt ba bb lk = XL Op_bclr bt ba bb Xxop_rfi lk
-rfci   bt ba bb lk = XL Op_bclr bt ba bb Xxop_rfci lk
-crandc bt ba bb lk = XL Op_bclr bt ba bb Xxop_crandc lk
-crxor  bt ba bb lk = XL Op_bclr bt ba bb Xxop_crxor lk
-crnand bt ba bb lk = XL Op_bclr bt ba bb Xxop_crnand lk
-creqv  bt ba bb lk = XL Op_bclr bt ba bb Xxop_creqv lk
-crand  bt ba bb lk = XL Op_bclr bt ba bb Xxop_crand lk
-crorc  bt ba bb lk = XL Op_bclr bt ba bb Xxop_crorc lk
-cror   bt ba bb lk = XL Op_bclr bt ba bb Xxop_cror lk
-bcctr  bt ba bb lk = XL Op_bclr bt ba bb Xxop_bcctr lk
+mcrf   bt ba bb = XL Op_bclr bt ba bb Xxop_mcrf
+bclr   bt ba bb = XL Op_bclr bt ba bb Xxop_bclr
+crnor  bt ba bb = XL Op_bclr bt ba bb Xxop_crnor
+rfmci  bt ba bb = XL Op_bclr bt ba bb Xxop_rfmci
+rfi    bt ba bb = XL Op_bclr bt ba bb Xxop_rfi
+rfci   bt ba bb = XL Op_bclr bt ba bb Xxop_rfci
+crandc bt ba bb = XL Op_bclr bt ba bb Xxop_crandc
+crxor  bt ba bb = XL Op_bclr bt ba bb Xxop_crxor
+crnand bt ba bb = XL Op_bclr bt ba bb Xxop_crnand
+creqv  bt ba bb = XL Op_bclr bt ba bb Xxop_creqv
+crand  bt ba bb = XL Op_bclr bt ba bb Xxop_crand
+crorc  bt ba bb = XL Op_bclr bt ba bb Xxop_crorc
+cror   bt ba bb = XL Op_bclr bt ba bb Xxop_cror
+bcctr  bt ba bb = XL Op_bclr bt ba bb Xxop_bcctr
 
 data Xfx_opcd = 
     Xop_mfocrf  
@@ -655,8 +655,10 @@ fxvupckbr     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbr     cond
 fxvupckbl     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbl     cond
 fxvcmph       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmph       cond
 fxvcmpb       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmpb       cond
-fxvshh        rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvshh        cond
-fxvshb        rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvshb        cond
+-- 
+fxvshh        rt ra imm cond = FXVI Op_nve_xo rt ra imm Xop_fxvshh        cond
+fxvshb        rt ra imm cond = FXVI Op_nve_xo rt ra imm Xop_fxvshb        cond
+--
 fxvsel        rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvsel        cond
 fxvsubhm      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvsubhm      cond
 fxvsubbm      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvsubbm      cond
@@ -753,6 +755,14 @@ data Inst =
         _fxv :: Fxv_opcd,
         _cond :: Fxv_cond 
     }
+    | FXVI {
+        _opcd :: Opcd,
+        _vrt :: VectorRegister,
+        _vra :: VectorRegister,
+        _imm :: Int8,
+        _fxv :: Fxv_opcd,
+        _cond :: Fxv_cond 
+    }
     | FXVS {
         _opcd :: Opcd,
         _vrt :: VectorRegister,
@@ -813,13 +823,19 @@ encode inst = case inst of
           .|. (encodeVectorRegister _vrb `shift` 16)
           .|. (fxv_opcd _fxv `shift` 21)
           .|. (fxv_cond _cond `shift` 30)
+    FXVI {..} -> (opcode _opcd)
+          .|. (encodeVectorRegister _vrt `shift` 6)
+          .|. (encodeVectorRegister _vra `shift` 11)
+          .|. ((fromIntegral _imm) `shift` 16)
+          .|. (fxv_opcd _fxv `shift` 21)
+          .|. (fxv_cond _cond `shift` 30)
     FXVS {..} -> (opcode _opcd)
           .|. (encodeVectorRegister _vrt `shift` 6)
           .|. (encodeRegister _ra `shift` 11)
           .|. (encodeRegister _rb `shift` 16)
           .|. (fxv_opcd _fxv `shift` 21)
 
-assembleInstruction :: Inst -> String
+assembleInstruction :: Inst -> Builder
 assembleInstruction inst = case inst of
     I {..} -> ""
     B {..} -> ""
