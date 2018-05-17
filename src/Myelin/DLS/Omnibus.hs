@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE RecordWildCards, TemplateHaskell, OverloadedStrings #-}
 module Myelin.DLS.Omnibus where
 
 import Control.Applicative
@@ -6,6 +6,7 @@ import Control.Lens
 
 import Data.Word
 import Data.Bits
+import Data.String
 
 data Error =
     WidthError { _expectedWidth :: Int, _actualWidth :: Int }
@@ -28,6 +29,9 @@ field name = Field {
         _fieldDescription = ""
     }
 
+instance IsString RegField where
+    fromString = field
+
 data Register = Register {
     _registerName :: String,
     _registerWidth :: Int,
@@ -36,7 +40,6 @@ data Register = Register {
     _fields :: [RegField]
 } deriving (Show, Read)
 makeLenses ''Register
-
 
 register :: String -> Register
 register name = Register {
@@ -47,13 +50,15 @@ register name = Register {
         _fields = []
     }
 
+instance IsString Register where
+    fromString = register
+
 data RegisterFile = RegisterFile {
     _registerFileName :: String,
     _registerFileDescription :: String,
     _registers :: [Register]
 } deriving (Show, Read)
 makeLenses ''RegisterFile
-
 
 registerFile :: String -> RegisterFile
 registerFile name = RegisterFile {
@@ -62,33 +67,28 @@ registerFile name = RegisterFile {
         _registers = []
     }
 
-exRegisterFile = registerFile "test_rf" 
+instance IsString RegisterFile where
+    fromString = registerFile
+
+exRegisterFile = "test_register_file" 
     & registerFileDescription .~ "My example RegisterFile"
     & registers .~ [
-        register "test_register" 
+        "test_register" 
         & registerDescription .~ "Test register"
         & registerWidth .~ 16
         & access .~ RW
         & fields .~ [
-            field "test_field"
-            & fieldWidth .~ 8
-            & fieldDescription .~ "Test Field One"
-        ,   field "test_field_2"
-            & fieldWidth .~ 8
-            & fieldDescription .~ "Test Field Two"
+            "test_field" & fieldWidth .~ 8 & fieldDescription .~ "Test Field One"
+        ,   "test_field_2" & fieldWidth .~ 8 & fieldDescription .~ "Test Field Two"
         ]
         ,
-        register "test_register_2" 
+        "test_register_2" 
         & registerDescription .~ "Test register 2"
         & registerWidth .~ 16
         & access .~ RW
         & fields .~ [
-            field "test_field"
-            & fieldWidth .~ 8
-            & fieldDescription .~ "Test Field One"
-        ,   field "test_field_2"
-            & fieldWidth .~ 8
-            & fieldDescription .~ "Test Field Two"
+            "test_field" & fieldWidth .~ 8 & fieldDescription .~ "Test Field One"
+        ,   "test_field_2" & fieldWidth .~ 8 & fieldDescription .~ "Test Field Two"
         ]
     ]
 
