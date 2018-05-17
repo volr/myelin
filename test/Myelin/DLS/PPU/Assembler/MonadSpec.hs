@@ -19,6 +19,8 @@ spec = describe "PPU Assembler Monad" $ do
             test0 `shouldBe` (Set.delete A.R1 [A.R0 ..])
         it "allocates and deallocates vector registers" $
             test1 `shouldBe` (Set.delete A.VR1 [A.VR0 ..])
+        it "allocates many vector registers" $
+            test3 `shouldBe` [A.VR12 ..]
         it "passes trivial test" $       
             (0 == 0) `shouldBe` True
             
@@ -39,3 +41,11 @@ test1 = _freeVectorRegisters finalAsmState
                 v <- allocateVectorRegister
                 v' <- allocateVectorRegister
                 releaseVectorRegister v
+
+test3 = _freeVectorRegisters finalAsmState
+    where 
+        (_, finalAsmState) = runState asm initialAsmState
+        asm :: Asm () Identity
+        asm = do 
+            allocateVectorRegisters 12
+            return ()

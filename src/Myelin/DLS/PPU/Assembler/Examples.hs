@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 module Myelin.DLS.PPU.Assembler.Examples where
 
 import Myelin.DLS.PPU.Assembler.Monad as M
@@ -62,3 +63,13 @@ stdpRaw select ca_base ac_base weight_base ca_offset ac_offset factors decay_fac
     -- save shifted weights
     writeWeights weight_base index r
     return ()
+
+ex :: Monad m => Asm () m
+ex = do
+    r0 <- allocateRegister
+    r1 <- allocateRegister
+    r2 <- allocateRegister
+    r3 <- block [r0, r1] [] $ \[r1, r2] [] -> do
+        return r1
+    return ()
+

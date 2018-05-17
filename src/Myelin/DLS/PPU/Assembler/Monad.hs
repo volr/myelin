@@ -42,11 +42,20 @@ allocateRegister = do
     usedRegisters <>= [f]
     return f
 
+allocateRegisters :: Monad m => Int -> Asm [Register] m
+allocateRegisters n = mapM (\_ -> allocateRegister) [1..n]
+
 releaseRegister :: Monad m => Register -> Asm () m
 releaseRegister r = do
     used <- use usedRegisters
     usedRegisters .= Set.delete r used
     freeRegisters <>= [r]
+
+releaseRegisters :: Monad m => Set Register -> Asm () m
+releaseRegisters r = do
+    used <- use usedRegisters
+    usedRegisters .= Set.difference used r
+    freeRegisters <>= r
 
 -- TODO: This does not actually handle errors...
 allocateTemporaryRegister :: Monad m => Asm Register m
@@ -71,11 +80,20 @@ allocateVectorRegister = do
     usedVectorRegisters <>= [f]
     return f
 
+allocateVectorRegisters :: Monad m => Int -> Asm [VectorRegister] m
+allocateVectorRegisters n = mapM (\_ -> allocateVectorRegister) [1..n]
+
 releaseVectorRegister :: Monad m => VectorRegister -> Asm () m
 releaseVectorRegister r = do
     used <- use usedVectorRegisters
     usedVectorRegisters .= Set.delete r used
     freeVectorRegisters <>= [r]
+
+releaseVectorRegisters :: Monad m => Set VectorRegister -> Asm () m
+releaseVectorRegisters r = do
+    used <- use usedVectorRegisters
+    usedVectorRegisters .= Set.difference used r
+    freeVectorRegisters <>= r
 
 allocateTemporaryVectorRegister :: Monad m => Asm VectorRegister m
 allocateTemporaryVectorRegister = do
@@ -90,6 +108,17 @@ releaseTemporaryVectorRegister r = do
     temp <- use temporaryVectorRegisters
     temporaryVectorRegisters .= Set.delete r temp
     freeVectorRegisters <>= [r]
+
+block :: Monad m => Set Register -> Set VectorRegister -> ([Register] -> [VectorRegister] -> Asm a m) -> Asm a m
+block retainedRegisters retainedVectorRegisters action = do
+    releaseVectorRegisters releasedVectorRegisters 
+    releaseRegisters releasedRegisters
+    r <- Set.elems <$> use usedRegisters
+    vr <- Set.elems <$> use usedVectorRegisters
+    action r vr
+    where 
+        releasedRegisters = Set.difference [A.R0 .. A.R31] retainedRegisters
+        releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
 
 iop :: Monad m => (Word32 -> Bool -> Bool -> A.Inst)
     -> Word32 
