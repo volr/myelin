@@ -1,2 +1,3 @@
-apt install gsl-dev
-apt install libopenmpi-dev
+#!/bin/bash
+
+sudo apt install -y autotools-dev libgsl-dev libopenmpi-dev automake

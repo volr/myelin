@@ -17,5 +17,5 @@ make install
 popd
 
 rm $1.tar.gz
-# rm -rf MUSIC-${1//v}
-
+rm -rf MUSIC-${1//v}
+rm -rf music-${1//v}-build
