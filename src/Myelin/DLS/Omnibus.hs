@@ -1,7 +1,9 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TemplateHaskell #-}
 module Myelin.DLS.Omnibus where
 
 import Control.Applicative
+import Control.Lens
+
 import Data.Word
 import Data.Bits
 
@@ -15,22 +17,88 @@ data RegField =
     | Field {
         _fieldName :: String,
         _fieldWidth :: Int,
-        _fieldDoc :: Maybe String
+        _fieldDescription :: String
     } deriving (Show, Read)
+makeLenses ''RegField
+
+field :: String -> RegField
+field name = Field {
+        _fieldName = name,
+        _fieldWidth = 0,
+        _fieldDescription = ""
+    }
 
 data Register = Register {
     _registerName :: String,
     _registerWidth :: Int,
     _access :: Access,
+    _registerDescription:: String,
     _fields :: [RegField]
 } deriving (Show, Read)
+makeLenses ''Register
+
+
+register :: String -> Register
+register name = Register {
+        _registerName = name,
+        _registerWidth = 32,
+        _access = RW,
+        _registerDescription = "",
+        _fields = []
+    }
+
+data RegisterFile = RegisterFile {
+    _registerFileName :: String,
+    _registerFileDescription :: String,
+    _registers :: [Register]
+} deriving (Show, Read)
+makeLenses ''RegisterFile
+
+
+registerFile :: String -> RegisterFile
+registerFile name = RegisterFile {
+        _registerFileName = name,
+        _registerFileDescription = "",
+        _registers = []
+    }
+
+exRegisterFile = registerFile "test_rf" 
+    & registerFileDescription .~ "My example RegisterFile"
+    & registers .~ [
+        register "test_register" 
+        & registerDescription .~ "Test register"
+        & registerWidth .~ 16
+        & access .~ RW
+        & fields .~ [
+            field "test_field"
+            & fieldWidth .~ 8
+            & fieldDescription .~ "Test Field One"
+        ,   field "test_field_2"
+            & fieldWidth .~ 8
+            & fieldDescription .~ "Test Field Two"
+        ]
+        ,
+        register "test_register_2" 
+        & registerDescription .~ "Test register 2"
+        & registerWidth .~ 16
+        & access .~ RW
+        & fields .~ [
+            field "test_field"
+            & fieldWidth .~ 8
+            & fieldDescription .~ "Test Field One"
+        ,   field "test_field_2"
+            & fieldWidth .~ 8
+            & fieldDescription .~ "Test Field Two"
+        ]
+    ]
 
 regExample :: Register
-regExample = Register "configuration" 32 RW [
+regExample = Register "configuration" 32 RW "This is an example register"
+    [
     Padding 3,
-    Field "reg_en" 3 Nothing,
-    Field "cap_en" 8 Nothing,
-    Field "cap" 9 (Just "documentation")
+    Field "reg_en" 3 "",
+    Field "cap_en" 8 "",
+    Field "cap" 9 ""
     ]
 
 checkRegister :: Register -> Maybe Error
@@ -54,7 +122,7 @@ data OmnibusHierachy =
     | RegisterTarget {
         _name :: String,
         _numEntries :: Int,
-        _registers :: [Register]
+        _registersFields :: [Register]
     }
     | Delay {
         _input :: OmnibusHierachy,
