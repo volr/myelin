@@ -1,18 +1,9 @@
-# Travis script partly stolen from
-#   https://github.com/fpco/wai-middleware-crowd/blob/master/.travis.yml
-language: c
-
 before_install:
 # Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 - stack --no-terminal --install-ghc test
-# Download and install music + nest and its dependencies
-- cd ci && sudo ./install_ubuntu_1604_system_dependencies.sh
-- cd ci && ./install_python_requirements.sh
-- cd ci && ./get_and_build_music.sh master
-- cd ci && ./get_and_build_nest.sh master master
 
 cache:
   directories:
