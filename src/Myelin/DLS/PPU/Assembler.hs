@@ -4,7 +4,9 @@ module Myelin.DLS.PPU.Assembler where
 import Data.Int
 import Data.Word
 import Data.Bits
+import Data.Monoid
 import Data.ByteString.Builder
+import qualified Data.ByteString.Char8 as B
 
 data ScalarType = Byte | Halfword
 data Arithmetic = Saturating| Modulo
@@ -178,6 +180,50 @@ opcode Op_sthu        = 45
 opcode Op_lmw         = 46
 opcode Op_stmw        = 47
 
+asm_opcode Op_null        = "null" 
+asm_opcode Op_twi         = "twi" 
+asm_opcode Op_nve_xo      = "nve_xo" 
+asm_opcode Op_nvecmpi     = "nvecmpi" 
+asm_opcode Op_syncmpi     = "syncmpi" 
+asm_opcode Op_mulli       = "mulli" 
+asm_opcode Op_subfic      = "subfic" 
+asm_opcode Op_syncmpi_rec = "syncmpi_rec" 
+asm_opcode Op_cmpli       = "cmpli" 
+asm_opcode Op_cmpi        = "cmpi" 
+asm_opcode Op_addic       = "addic" 
+asm_opcode Op_addic_rec   = "addic_rec" 
+asm_opcode Op_addi        = "addi" 
+asm_opcode Op_addis       = "addis" 
+asm_opcode Op_bc          = "bc" 
+asm_opcode Op_branch      = "branch" 
+asm_opcode Op_bclr        = "bclr" 
+asm_opcode Op_rlwimi      = "rlwimi" 
+asm_opcode Op_rlwinm      = "rlwinm" 
+asm_opcode Op_rlwnm       = "rlwnm" 
+asm_opcode Op_ori         = "ori" 
+asm_opcode Op_oris        = "oris" 
+asm_opcode Op_xori        = "xori" 
+asm_opcode Op_xoris       = "xoris" 
+asm_opcode Op_andi        = "andi" 
+asm_opcode Op_andis       = "andis" 
+asm_opcode Op_alu_xo      = "alu_xo" 
+asm_opcode Op_lwz         = "lwz" 
+asm_opcode Op_lwzu        = "lwzu" 
+asm_opcode Op_lbz         = "lbz" 
+asm_opcode Op_lbzu        = "lbzu" 
+asm_opcode Op_stw         = "stw" 
+asm_opcode Op_stwu        = "stwu" 
+asm_opcode Op_stb         = "stb" 
+asm_opcode Op_stbu        = "stbu" 
+asm_opcode Op_lhz         = "lhz" 
+asm_opcode Op_lhzu        = "lhzu" 
+asm_opcode Op_lha         = "lha" 
+asm_opcode Op_lhau        = "lhau" 
+asm_opcode Op_sth         = "sth" 
+asm_opcode Op_sthu        = "sthu" 
+asm_opcode Op_lmw         = "lmw" 
+asm_opcode Op_stmw        = "stmw" 
+
 twi         rt ra d = D Op_twi         rt ra d
 mulli       rt ra d = D Op_mulli       rt ra d
 subfic      rt ra d = D Op_subfic      rt ra d 
@@ -329,6 +375,60 @@ x_opcd Xop_srawi   = 824
 x_opcd Xop_extsh   = 922
 x_opcd Xop_extsb   = 954
 
+x_asm Xop_cmp     = "cmp" 
+x_asm Xop_tw      = "tw"
+x_asm Xop_lwzx    = "lwzx"
+x_asm Xop_slw     = "slw"
+x_asm Xop_cntlzw  = "cntlzw"
+x_asm Xop_and     = "and"
+x_asm Xop_cmpl    = "cmpl"
+x_asm Xop_nvem    = "nvem"
+x_asm Xop_nves    = "nves"
+x_asm Xop_nvemtl  = "nvemtl"
+x_asm Xop_lwzux   = "lwzux"
+x_asm Xop_andc    = "andc"
+x_asm Xop_wait    = "wait"
+x_asm Xop_mfmsr   = "mfmsr"
+x_asm Xop_lbzx    = "lbzx"
+x_asm Xop_lbzux   = "lbzux"
+x_asm Xop_popcb   = "popcb"
+x_asm Xop_nor     = "nor"
+x_asm Xop_mtmsr   = "mtmsr"
+x_asm Xop_stwx    = "stwx"
+x_asm Xop_prtyw   = "prtyw"
+x_asm Xop_stwux   = "stwux"
+x_asm Xop_stbx    = "stbx"
+x_asm Xop_stbux   = "stbux"
+x_asm Xop_lhzx    = "lhzx"
+x_asm Xop_eqv     = "eqv"
+x_asm Xop_eciwx   = "eciwx"
+x_asm Xop_lhzux   = "lhzux"
+x_asm Xop_xor     = "xor"
+x_asm Xop_lhax    = "lhax"
+x_asm Xop_lhaux   = "lhaux"
+x_asm Xop_sthx    = "sthx"
+x_asm Xop_orc     = "orc"
+x_asm Xop_ecowx   = "ecowx"
+x_asm Xop_sthux   = "sthux"
+x_asm Xop_or      = "or"
+x_asm Xop_nand    = "nand"
+x_asm Xop_srw     = "srw"
+x_asm Xop_sync    = "sync"
+x_asm Xop_synm    = "synm"
+x_asm Xop_syns    = "syns"
+x_asm Xop_synmtl  = "synmtl"
+x_asm Xop_synmtvr = "synmtvr"
+x_asm Xop_synmfvr = "synmfvr"
+x_asm Xop_synmtp  = "synmtp"
+x_asm Xop_synmfp  = "synmfp"
+x_asm Xop_synmvvr = "synmvvr"
+x_asm Xop_synops  = "synops"
+x_asm Xop_synswp  = "synswp"
+x_asm Xop_sraw    = "sraw"
+x_asm Xop_srawi   = "srawi"
+x_asm Xop_extsh   = "extsh"
+x_asm Xop_extsb   = "extsb"
+
 -- c.f. p. 193-197
 cmp     rt ra rb = X Op_alu_xo rt ra rb Xop_cmp     
 tw      rt ra rb = X Op_alu_xo rt ra rb Xop_tw      
@@ -421,6 +521,23 @@ xo_opcd Xop_add    = 266
 xo_opcd Xop_divwu  = 459
 xo_opcd Xop_divw   = 491
 
+xo_asm Xop_subfc  = "subfc"
+xo_asm Xop_addc   = "addc"
+xo_asm Xop_mulhwu = "mulhwu"
+xo_asm Xop_subf   = "subf"
+xo_asm Xop_mulhw  = "mulhw"
+xo_asm Xop_neg    = "neg"
+xo_asm Xop_subfe  = "subfe"
+xo_asm Xop_adde   = "adde"
+xo_asm Xop_subfze = "subfze"
+xo_asm Xop_addze  = "addze"
+xo_asm Xop_subfme = "subfme"
+xo_asm Xop_addme  = "addme"
+xo_asm Xop_mullw  = "mullw"
+xo_asm Xop_add    = "add"
+xo_asm Xop_divwu  = "divwu"
+xo_asm Xop_divw   = "divw"
+
 subfc  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfc  
 addc   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addc   
 mulhwu rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mulhwu 
@@ -470,6 +587,21 @@ xl_opcd Xxop_crorc  = 417
 xl_opcd Xxop_cror   = 449
 xl_opcd Xxop_bcctr  = 528
 
+xl_asm Xxop_mcrf   = "mcrf"
+xl_asm Xxop_bclr   = "bclr"
+xl_asm Xxop_crnor  = "crnor"
+xl_asm Xxop_rfmci  = "rfmci"
+xl_asm Xxop_rfi    = "rfi"
+xl_asm Xxop_rfci   = "rfci"
+xl_asm Xxop_crandc = "crandc"
+xl_asm Xxop_crxor  = "crxor"
+xl_asm Xxop_crnand = "crnand"
+xl_asm Xxop_creqv  = "creqv"
+xl_asm Xxop_crand  = "crand"
+xl_asm Xxop_crorc  = "crorc"
+xl_asm Xxop_cror   = "cror"
+xl_asm Xxop_bcctr  = "bcctr"
+
 mcrf   bt ba bb = XL Op_bclr bt ba bb Xxop_mcrf
 bclr   bt ba bb = XL Op_bclr bt ba bb Xxop_bclr
 crnor  bt ba bb = XL Op_bclr bt ba bb Xxop_crnor
@@ -496,6 +628,11 @@ xfx_opcd Xop_mfocrf = 19
 xfx_opcd Xop_mtocrf = 144
 xfx_opcd Xop_mfspr  = 339
 xfx_opcd Xop_mtspr  = 467
+
+xfx_asm Xop_mfocrf = "mfocrf"
+xfx_asm Xop_mtocrf = "mtocrf"
+xfx_asm Xop_mfspr  = "mfspr"
+xfx_asm Xop_mtspr  = "mtspr"
 
 mfocrf rt spr = XFX Op_alu_xo rt spr Xop_mfocrf
 mtocrf rt spr = XFX Op_alu_xo rt spr Xop_mtocrf
@@ -612,6 +749,60 @@ fxv_opcd Xop_fxvaddbfs     = 477
 fxv_opcd Xop_fxvlax        = 492
 fxv_opcd Xop_fxvstax       = 508
 
+fxv_asm Xop_fxvmahm       = "fxvmahm"
+fxv_asm Xop_fxvmabm       = "fxvmabm"
+fxv_asm Xop_fxvmtacb      = "fxvmtacb"
+fxv_asm Xop_fxvmtach      = "fxvmtach"
+fxv_asm Xop_fxvmahfs      = "fxvmahfs"
+fxv_asm Xop_fxvmabfs      = "fxvmabfs"
+fxv_asm Xop_fxvmtacbf     = "fxvmtacbf"
+fxv_asm Xop_fxvmtachf     = "fxvmtachf"
+fxv_asm Xop_fxvmatachm    = "fxvmatachm"
+fxv_asm Xop_fxvmatacbm    = "fxvmatacbm"
+fxv_asm Xop_fxvmatachfs   = "fxvmatachfs"
+fxv_asm Xop_fxvmatacbfs   = "fxvmatacbfs"
+fxv_asm Xop_fxvmulhm      = "fxvmulhm"
+fxv_asm Xop_fxvmulbm      = "fxvmulbm"
+fxv_asm Xop_fxvmulhfs     = "fxvmulhfs"
+fxv_asm Xop_fxvmulbfs     = "fxvmulbfs"
+fxv_asm Xop_fxvmultachm   = "fxvmultachm"
+fxv_asm Xop_fxvmultacbm   = "fxvmultacbm"
+fxv_asm Xop_fxvmultachfs  = "fxvmultachfs"
+fxv_asm Xop_fxvmultacbfs  = "fxvmultacbfs"
+fxv_asm Xop_fxvinx        = "fxvinx"
+fxv_asm Xop_fxvpckbu      = "fxvpckbu"
+fxv_asm Xop_fxvoutx       = "fxvoutx"
+fxv_asm Xop_fxvpckbl      = "fxvpckbl"
+fxv_asm Xop_fxvsplath     = "fxvsplath"
+fxv_asm Xop_fxvsplatb     = "fxvsplatb"
+fxv_asm Xop_fxvupckbr     = "fxvupckbr"
+fxv_asm Xop_fxvupckbl     = "fxvupckbl"
+fxv_asm Xop_fxvcmph       = "fxvcmph"
+fxv_asm Xop_fxvcmpb       = "fxvcmpb"
+fxv_asm Xop_fxvshh        = "fxvshh"
+fxv_asm Xop_fxvshb        = "fxvshb"
+fxv_asm Xop_fxvsel        = "fxvsel"
+fxv_asm Xop_fxvsubhm      = "fxvsubhm"
+fxv_asm Xop_fxvsubbm      = "fxvsubbm"
+fxv_asm Xop_fxvsubhfs     = "fxvsubhfs"
+fxv_asm Xop_fxvsubbfs     = "fxvsubbfs"
+fxv_asm Xop_fxvaddactachm = "fxvaddactachm"
+fxv_asm Xop_fxvaddactacb  = "fxvaddactacb"
+fxv_asm Xop_fxvaddactachf = "fxvaddactachf"
+fxv_asm Xop_fxvaddactacbf = "fxvaddactacbf"
+fxv_asm Xop_fxvaddachm    = "fxvaddachm"
+fxv_asm Xop_fxvaddacbm    = "fxvaddacbm"
+fxv_asm Xop_fxvaddachfs   = "fxvaddachfs"
+fxv_asm Xop_fxvaddacbfs   = "fxvaddacbfs"
+fxv_asm Xop_fxvaddtachm   = "fxvaddtachm"
+fxv_asm Xop_fxvaddtacb    = "fxvaddtacb"
+fxv_asm Xop_fxvaddhm      = "fxvaddhm"
+fxv_asm Xop_fxvaddbm      = "fxvaddbm"
+fxv_asm Xop_fxvaddhfs     = "fxvaddhfs"
+fxv_asm Xop_fxvaddbfs     = "fxvaddbfs"
+fxv_asm Xop_fxvlax        = "fxvlax"
+fxv_asm Xop_fxvstax       = "fxvstax"
+
 data Fxv_cond = 
     Fxv_cond_null
     | Fxv_cond_gt
@@ -646,15 +837,15 @@ fxvmultacbm   rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultacbm   cond
 fxvmultachfs  rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultachfs  cond
 fxvmultacbfs  rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvmultacbfs  cond
 fxvinx        rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvinx
-fxvpckbu      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbu      cond
+fxvpckbu      rt ra rb cond = FXV Op_nve_xo rt ra rb  Xop_fxvpckbu      cond
 fxvoutx       rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvoutx
-fxvpckbl      rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvpckbl      cond
+fxvpckbl      rt ra rb cond = FXV Op_nve_xo rt ra rb  Xop_fxvpckbl      cond
 fxvsplath     rt ra         = FXVS Op_nve_xo rt ra R0 Xop_fxvsplath
 fxvsplatb     rt ra         = FXVS Op_nve_xo rt ra R0 Xop_fxvsplatb
-fxvupckbr     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbr     cond
-fxvupckbl     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvupckbl     cond
-fxvcmph       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmph       cond
-fxvcmpb       rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvcmpb       cond
+fxvupckbr     rt ra rb cond = FXV Op_nve_xo rt ra rb  Xop_fxvupckbr     cond
+fxvupckbl     rt ra rb cond = FXV Op_nve_xo rt ra rb  Xop_fxvupckbl     cond
+fxvcmph       rt ra rb cond = FXV Op_nve_xo rt ra rb  Xop_fxvcmph       cond
+fxvcmpb       rt ra rb cond = FXV Op_nve_xo rt ra rb  Xop_fxvcmpb       cond
 -- 
 fxvshh        rt ra imm cond = FXVI Op_nve_xo rt ra imm Xop_fxvshh        cond
 fxvshb        rt ra imm cond = FXVI Op_nve_xo rt ra imm Xop_fxvshb        cond
@@ -838,12 +1029,15 @@ encode inst = case inst of
 assembleInstruction :: Inst -> Builder
 assembleInstruction inst = case inst of
     I {..} -> ""
-    B {..} -> ""
-    D {..} -> ""
-    XO {..} -> ""
-    X {..} -> ""
+    B {..} -> asm_opcode _opcd <> " " <> reg _bo <> " " <> reg _bi <> " "
+    D {..} -> asm_opcode _opcd <> " " <> reg _rt <> " " <> reg _ra <> " " <> (string8 . show $ _d)
+    XO {..} -> xo_asm _xo <> " " <> reg _rt <> " " <> reg _ra <> " " <> reg _rb
+    X {..} -> x_asm _x <> " " <> reg _rt <> " " <> reg _ra <> " " <> reg _rb
     M {..} -> ""
-    XFX {..} -> ""
-    XL {..} -> ""
-    FXV {..} -> ""
-    FXVS {..} -> ""
+    XFX {..} -> xfx_asm _xfx <> " " <> reg _rt <> " " <> sreg _spr
+    XL {..} -> xl_asm _xl <> " " <> reg _bt <> " " <> reg _ba <> " " <> reg _bb
+    FXV {..} -> fxv_asm _fxv <> " " <> vreg _vrt <> " " <> vreg _vra <> " " <> vreg _vrb
+    FXVS {..} -> fxv_asm _fxv <> " " <> vreg _vrt <> " " <> reg _ra <> " " <> reg _rb
+    where vreg = string8 . show . encodeVectorRegister
+          reg = string8 . show . encodeRegister
+          sreg = string8 . show . encodeSpecialPurposeRegister

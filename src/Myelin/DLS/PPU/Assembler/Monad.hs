@@ -109,6 +109,11 @@ releaseTemporaryVectorRegister r = do
     temporaryVectorRegisters .= Set.delete r temp
     freeVectorRegisters <>= [r]
 
+retainVectorRegisters :: Monad m => Set VectorRegister -> Asm () m
+retainVectorRegisters retainedVectorRegisters = 
+    releaseVectorRegisters releasedVectorRegisters
+    where releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
+
 block :: Monad m => Set Register -> Set VectorRegister -> ([Register] -> [VectorRegister] -> Asm a m) -> Asm a m
 block retainedRegisters retainedVectorRegisters action = do
     releaseVectorRegisters releasedVectorRegisters 
