@@ -1,1 +1,4 @@
 addict
+lazyarray
+neo
+pyNN

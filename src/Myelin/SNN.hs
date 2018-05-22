@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Myelin.SNN where
 
@@ -21,7 +23,31 @@ import Data.Monoid
 import Data.Text
 import Data.Traversable
 
+import GHC.Generics
+
 type Label = String
+
+data MusicNode =
+    EventInProxy {
+        _port_name :: String    
+    }
+    | EventOutProxy {
+        _port_name :: String
+    }
+    | ContinuousOutProxy {
+        _port_name :: String,
+        _record_from :: [String],
+        _interval :: Float
+    }
+    | ContinuousInProxy {
+        _port_name :: String
+    }
+    | MessageInProxy {
+        _port_name :: String
+    }
+    | MessageOutProxy {
+        _port_name :: String
+    } deriving (Show, Generic, FromJSON, ToJSON)
 
 {--| 
 
@@ -67,61 +93,86 @@ SpikeSourcePoissonRefractory
 --}
 data NeuronType =
     IFCurrentAlpha {
-        tau_m :: Float, -- ^ Membrane time constant  
-        tau_refrac :: Float, -- ^ Refractory time
-        v_thresh :: Float, -- ^ Threshhold potential
-        tau_syn_E :: Float, -- ^ Excitatory synaptic time constant
-        v_rest :: Float, -- ^ Resting potential
-        cm :: Float, -- ^ Membrane capactitance
-        v_reset :: Float, -- ^ Reset potential 
-        tau_syn_I :: Float, -- ^ Inhibitory synaptic time constant
-        i_offset :: Float -- ^ Offset current
+        tau_m :: Float, -- ^ membrane time constant  
+        tau_refrac :: Float, -- ^ refractory time
+        v_thresh :: Float, -- ^ threshhold potential
+        tau_syn_E :: Float, -- ^ excitatory synaptic time constant
+        v_rest :: Float, -- ^ resting potential
+        cm :: Float, -- ^ membrane capactitance
+        v_reset :: Float, -- ^ reset potential 
+        tau_syn_I :: Float, -- ^ inhibitory synaptic time constant
+        i_offset :: Float -- ^ offset current
     }
     | IFCondAlpha {
-        v_rest :: Float, -- ^ Resting membrane potential
-        cm :: Float, -- ^ Capacity of the membrane
-        tau_m :: Float, -- ^ Membrane time constant
-        tau_refrac :: Float, -- ^ Duration of refractory period
-        tau_syn_E :: Float, -- ^ Rise time of the excitatory synaptic alpha function
-        tau_syn_I :: Float, -- ^ Rise time of the inhibitory synaptic alpha function
-        e_rev_E :: Float, -- ^ Reversal potential for excitatory input
-        e_rev_I :: Float, -- ^ Reversal potential for inhibitory input
-        v_thresh :: Float, -- ^ Spike threshold
-        v_reset :: Float, -- ^ Reset potential after a spike
-        i_offset :: Float -- ^ Offset current
+        v_rest :: Float, -- ^ resting membrane potential
+        cm :: Float, -- ^ capacity of the membrane
+        tau_m :: Float, -- ^ membrane time constant
+        tau_refrac :: Float, -- ^ duration of refractory period
+        tau_syn_E :: Float, -- ^ rise time of the excitatory synaptic alpha function
+        tau_syn_I :: Float, -- ^ rise time of the inhibitory synaptic alpha function
+        e_rev_E :: Float, -- ^ reversal potential for excitatory input
+        e_rev_I :: Float, -- ^ reversal potential for inhibitory input
+        v_thresh :: Float, -- ^ spike threshold
+        v_reset :: Float, -- ^ reset potential after a spike
+        i_offset :: Float -- ^ offset current
     }
     | IFSpikey {
-        e_rev_I :: Float, -- ^ Excitatory reversal current
-        g_leak :: Float, -- ^ Leak conductance
-        tau_refrac :: Float, -- ^ Refractory time
-        v_reset :: Float, -- ^ Reset potential
-        v_rest :: Float, -- ^ Resting potential
-        v_thresh :: Float -- ^ Threshhold potential
+        e_rev_I :: Float, -- ^ excitatory reversal current
+        g_leak :: Float, -- ^ leak conductance
+        tau_refrac :: Float, -- ^ refractory time
+        v_reset :: Float, -- ^ reset potential
+        v_rest :: Float, -- ^ resting potential
+        v_thresh :: Float -- ^ threshhold potential
     }
     | IFCurrExp {
-        cm :: Float, -- ^ Membrane capacitance
-        tau_m :: Float, -- ^ Membrane time constant
-        tau_syn_E :: Float, -- ^ Excitatory synaptic time constant
-        tau_syn_I :: Float, -- ^ Inhibitory synaptic time constant
-        tau_refrac :: Float,
-        v_thresh :: Float,
-        v_rest :: Float,
-        v_reset :: Float,
-        i_offset :: Float
+        cm :: Float, -- ^ membrane capacitance
+        tau_m :: Float, -- ^ membrane time constant
+        tau_syn_E :: Float, -- ^ excitatory synaptic time constant
+        tau_syn_I :: Float, -- ^ inhibitory synaptic time constant
+        tau_refrac :: Float, -- ^ refractory time
+        v_thresh :: Float, -- ^ threshhold voltage
+        v_rest :: Float, -- ^ resting potential
+        v_reset :: Float, -- ^ reset potential
+        i_offset :: Float -- ^ offset current 
     }
-    | IFCondExp
-      { v_rest :: Float
-      , cm :: Float
-      , tau_m :: Float
-      , tau_refrac :: Float
-      , tau_syn_E :: Float
-      , tau_syn_I :: Float
-      , e_rev_E :: Float
-      , e_rev_I :: Float
-      , v_thresh :: Float
-      , v_reset :: Float
-      , i_offset :: Float
+    | IFCondExp { 
+        v_rest :: Float -- ^ resting potential
+      , cm :: Float -- ^ membrane capacitance
+      , tau_m :: Float -- ^ membrane time constant
+      , tau_refrac :: Float -- ^ refractory time
+      , tau_syn_E :: Float -- ^ excitatory synaptic time constant
+      , tau_syn_I :: Float -- ^ inhibitory synaptic time constant
+      , e_rev_E :: Float -- ^ excitatory reversal potential
+      , e_rev_I :: Float -- ^ inhibitory reversal potential
+      , v_thresh :: Float -- ^ spike initiation threshold
+      , v_reset :: Float -- ^ reset value for membrane potential after a spike
+      , i_offset :: Float -- ^ offset current 
       }
+    | Izhikevich {
+        a :: Float,
+        i_offset :: Float,
+        c :: Float,
+        d :: Float,
+        b :: Float
+    }
+    | EIFCondExp {
+        v_reset :: Float,
+        i_offset :: Float,
+        tau_w :: Float,
+        tau_syn_I :: Float,
+        e_rev_E :: Float,
+        v_rest :: Float, 
+        cm :: Float,
+        tau_syn_E :: Float,
+        tau_m :: Float,
+        a :: Float,
+        delta_T :: Float,
+        v_thresh :: Float,
+        b :: Float,
+        v_spike :: Float,
+        e_rev_I :: Float,
+        tau_refrac :: Float
+    }
     | EIFCondAlpha {
         cm :: Float, -- ^ capacity of the membrane
         tau_refrac :: Float, -- ^ duration of the refractory period
@@ -141,10 +192,10 @@ data NeuronType =
         tau_syn_I :: Float -- ^ rise time of the inhibitory synaptic conductance (alpha function)
         }
     | HHCondExp {
-        cm :: Float,
-        e_rev_E :: Float,
-        e_rev_I :: Float,
-        e_rev_K :: Float,
+        cm :: Float, -- ^ capacity of the membrane
+        e_rev_E :: Float, -- ^ excitatory reversal potential
+        e_rev_I :: Float, -- ^ inhibitory reversal potential
+        e_rev_K :: Float, 
         e_rev_Na :: Float,
         e_rev_leak :: Float,
         g_leak :: Float,
@@ -175,10 +226,10 @@ if_cond_exp_default = IFCondExp
 if_current_alpha_default :: NeuronType
 if_current_alpha_default = IFCurrentAlpha {
     tau_m = 20.0,
-    tau_refrac = 0.0,
-    v_thresh = -65.0,
-    tau_syn_E =  5.0,
-    tau_syn_I = 5.0,
+    tau_refrac = 0.1,
+    v_thresh = -50.0,
+    tau_syn_E =  0.5,
+    tau_syn_I = 0.5,
     v_rest = -65.0,
     cm = 1.0,
     v_reset = -65.0,
@@ -213,14 +264,63 @@ if_spikey_default = IFSpikey {
 if_current_exponential_default :: NeuronType
 if_current_exponential_default = IFCurrExp {
     cm = 1.0,
-    tau_m = 10.0,
+    tau_m = 20.0,
     tau_syn_E = 5.0,
     tau_syn_I = 5.0,
-    tau_refrac = 2.0,
+    tau_refrac = 0.1,
     v_thresh = -50.0,
     v_rest = -65.0,
-    v_reset = 0.0,
+    v_reset = -65.0,
     i_offset = 0.0
+}
+
+izhikevich_default :: NeuronType
+izhikevich_default = Izhikevich {
+    a = 0.02,
+    i_offset = 0.0,
+    c = -65.0,
+    d = 2.0,
+    b = 0.2
+}
+
+eif_cond_exp_default :: NeuronType
+eif_cond_exp_default = EIFCondExp {
+    v_reset = -70.6,
+    i_offset = 0.0,
+    tau_w = 144.0,
+    tau_syn_I = 5.0,
+    e_rev_E = 0.0,
+    v_rest = -70.6, 
+    cm = 0.281, 
+    tau_syn_E = 5.0, 
+    tau_m = 9.3667, 
+    a = 4.0, 
+    delta_T = 2.0, 
+    v_thresh = -50.4, 
+    b = 0.0805, 
+    v_spike = -40.0, 
+    e_rev_I = -80.0, 
+    tau_refrac = 0.1
+}
+
+eif_cond_alpha_default :: NeuronType
+eif_cond_alpha_default = EIFCondAlpha {
+    v_reset = -70.6, 
+    i_offset = 0.0, 
+    tau_w = 144.0, 
+    tau_syn_I = 5.0, 
+    e_rev_E = 0.0, 
+    v_rest = -70.6, 
+    cm = 0.281, 
+    tau_syn_E = 5.0, 
+    tau_m = 9.3667, 
+    a = 4.0, 
+    delta_T = 2.0, 
+    v_thresh = -50.4, 
+    b = 0.0805, 
+    v_spike = -40.0, 
+    e_rev_I = -80.0, 
+    tau_refrac = 0.1
 }
 
 instance ToJSON NeuronType where
@@ -285,6 +385,52 @@ instance ToJSON NeuronType where
             "v_reset" .= v_reset,
             "i_offset" .= i_offset
         ]
+    toJSON Izhikevich {..} = object [
+            "type" .= ("Izhikevich" :: String),
+            "a" .= a,
+            "i_offset" .= i_offset,
+            "c" .= c,
+            "d" .= d,
+            "b" .= b
+        ]
+    toJSON EIFCondExp {..} = object [
+            "type" .= ("EIFCondExp" :: String),
+            "v_reset" .= v_reset,
+            "i_offset" .= i_offset,
+            "tau_w" .= tau_w,
+            "tau_syn_I" .= tau_syn_I,
+            "e_rev_E" .= e_rev_E,
+            "v_rest" .= v_rest,
+            "cm" .= cm,
+            "tau_syn_E" .= tau_syn_E,
+            "tau_m" .= tau_m,
+            "a" .= a,
+            "delta_T" .= delta_T,
+            "v_thresh" .= v_thresh,
+            "b" .= b,
+            "v_spike" .= v_spike,
+            "e_rev_I" .= e_rev_I,
+            "tau_refrac" .= tau_refrac
+        ]
+    toJSON EIFCondAlpha {..} = object [
+            "type" .= ("EIFCondAlpha" :: String),
+            "cm" .= cm, 
+            "tau_refrac" .= tau_refrac, 
+            "v_spike" .= v_spike, 
+            "v_reset" .= v_reset, 
+            "v_rest" .= v_rest, 
+            "tau_m" .= tau_m, 
+            "i_offset" .= i_offset, 
+            "a" .= a, 
+            "b" .= b, 
+            "delta_T" .= delta_T, 
+            "tau_w" .= tau_w, 
+            "v_thresh" .= v_thresh, 
+            "e_rev_E" .= e_rev_E, 
+            "tau_syn_E" .= tau_syn_E, 
+            "e_rev_I" .= e_rev_I, 
+            "tau_syn_I" .= tau_syn_I
+        ]
 
 instance FromJSON NeuronType where
     parseJSON = withObject "neuron" $ \o -> do
@@ -333,7 +479,7 @@ instance FromJSON NeuronType where
                 o .: "v_thresh"
             "IFCurrExp" -> IFCurrExp <$>
                 o .: "cm" <*>
-                o .:"tau_m" <*>
+                o .: "tau_m" <*>
                 o .: "tau_syn_E" <*>
                 o .: "tau_syn_I" <*>
                 o .: "tau_refrac" <*>
@@ -341,14 +487,55 @@ instance FromJSON NeuronType where
                 o .: "v_rest" <*>
                 o .: "v_reset" <*>
                 o .: "i_offset"
+            "Izhikevich" -> Izhikevich <$>
+                o .: "a" <*>
+                o .: "i_offset"<*>
+                o .: "c" <*>
+                o .: "d" <*>
+                o .: "b"
+            "EIFCondExp" -> EIFCondExp <$>
+                o .: "v_reset" <*>
+                o .: "i_offset" <*>
+                o .: "tau_w" <*>
+                o .: "tau_syn_I" <*>
+                o .: "e_rev_E" <*>
+                o .: "v_rest" <*>
+                o .: "cm" <*>
+                o .: "tau_syn_E" <*>
+                o .: "tau_m" <*>
+                o .: "a" <*>
+                o .: "delta_T" <*>
+                o .: "v_thresh" <*>
+                o .: "b" <*>
+                o .: "v_spike" <*>
+                o .: "e_rev_I" <*>
+                o .: "tau_refrac"
+            "EIFCondAlpha" -> EIFCondAlpha <$>
+                o .: "cm" <*>
+                o .: "tau_refrac" <*>
+                o .: "v_spike" <*>
+                o .: "v_reset" <*>
+                o .: "v_rest" <*>
+                o .: "tau_m" <*>
+                o .: "i_offset" <*>
+                o .: "a" <*>
+                o .: "b" <*>
+                o .: "delta_T" <*>
+                o .: "tau_w" <*>
+                o .: "v_thresh" <*>
+                o .: "e_rev_E" <*>
+                o .: "tau_syn_E" <*>
+                o .: "e_rev_I" <*>
+                o .: "tau_syn_I"
+
 
 -- | A Node is a vertex in the connectivity graph.
 data Node = Population {
-        _numNeurons :: Integer,
-        _neuronType :: NeuronType,
-        _label :: Label,
-        _id :: Int,
-        _record_spikes :: Bool
+        _numNeurons :: Integer, -- ^ number of neurons in the population
+        _neuronType :: NeuronType, 
+        _label :: Label, -- ^ human readable label for the population
+        _id :: Int, -- ^ internal identifier to keep track of the popultion
+        _record_spikes :: Bool -- ^ whether to record spikes from this population
     }
     | Input {
         _fileName :: String,
@@ -730,13 +917,12 @@ net = do
     a <- population 10 if_current_exponential_default "a" False
     b <- population 20 if_current_exponential_default "b" False
     c <- population 20 if_current_exponential_default "c" False
-    -- TODO: This is kind of ugly now
+    -- TODO: this is kind of ugly now
     projection (AllToAll 1.0 False) (Static Excitatory) input a
     projection (AllToAll 1.0 False) (Static Excitatory) a b
     projection (AllToAll 1.0 False) (Static Excitatory) b c
     projection (AllToAll 1.0 False) (Static Excitatory) c a
-    -- TODO: inhibitory projection target is not really meaningful
-    -- for output/input
+    -- TODO: inhibitory projection target is not really meaningful for output/input
     output <- fileOutput "out.txt"
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
 

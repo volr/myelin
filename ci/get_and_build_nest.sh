@@ -5,7 +5,8 @@ tar xf $1.tar.gz
 mkdir nest-simulator-$1-build
 pushd .
 cd nest-simulator-$1-build
-cmake -DCMAKE_INSTALL_PREFIX:PATH=../nest-${1//v}/ -Dwith-music=../music-${2//v}/ -Dwith-mpi=ON ../nest-simulator-${1//v}
+cmake -DCMAKE_INSTALL_PREFIX:PATH=../nest-${1//v}/ ../nest-simulator-${1//v} # -Dwith-music=../music-${2//v}/ -Dwith-mpi=ON
+
 make -j8
 make install
 
