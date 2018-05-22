@@ -23,6 +23,8 @@ import Data.Monoid
 import Data.Text
 import Data.Traversable
 
+import Numeric.LinearAlgebra
+
 import GHC.Generics
 
 type Label = String
@@ -206,6 +208,8 @@ data NeuronType =
         tau_syn_I :: Float,
         v_offset :: Float
     } deriving (Eq, Show)
+
+makePrisms ''NeuronType
 
 -- ^  Defaults taken from http://neuralensemble.org/docs/PyNN/standardmodels.html
 if_cond_exp_default :: NeuronType
@@ -908,47 +912,3 @@ fileOutput filename = do
     let output = Output filename i
     nodes <>= [output]
     return output
-
--- Example API use
-
-net :: Monad m => SNN () m
-net = do
-    input <- spikeSourceArray [1, 2, 3, 5]
-    a <- population 10 if_current_exponential_default "a" False
-    b <- population 20 if_current_exponential_default "b" False
-    c <- population 20 if_current_exponential_default "c" False
-    -- TODO: this is kind of ugly now
-    projection (AllToAll 1.0 False) (Static Excitatory) input a
-    projection (AllToAll 1.0 False) (Static Excitatory) a b
-    projection (AllToAll 1.0 False) (Static Excitatory) b c
-    projection (AllToAll 1.0 False) (Static Excitatory) c a
-    -- TODO: inhibitory projection target is not really meaningful for output/input
-    output <- fileOutput "out.txt"
-    projection (AllToAll 1.0 False) (Static Inhibitory) c output
-
-netTest :: SNN () Identity
-netTest = net
-
-toTask :: SNN () Identity -> ExecutionTarget -> Double -> Task
-toTask model target runtime =
-  Task {
-      _executionTarget = target,
-      _simulationTime = runtime,
-      _network = Network {
-          _blocks = [block]
-      }
-  }
-  where (_, block) = runState model initialBlockState
-
-taskToJSON :: Task -> String
-taskToJSON = B.unpack . encodePretty . toJSON
-
-exampleTask =
-    Task {
-        _executionTarget = Nest 0.1 0.5,
-        _simulationTime = 100.0,
-        _network = Network {
-            _blocks = [block]
-        }
-    }
-    where (_, block) = runState netTest initialBlockState

@@ -1,11 +1,20 @@
 module Myelin.Examples where
 
-import Myelin.SNN
+import Control.Monad.Trans.State
+import Control.Monad.Trans.Class
+import Control.Lens
+import Control.Monad
+import Control.Monad.Trans.Identity
 
+import Data.Aeson
+import Data.Aeson.Encode.Pretty
+import Data.ByteString.Lazy.Char8 as B
+
+import Myelin.SNN
 
 net :: Monad m => SNN () m
 net = do
-    input <- spikeSourceArray [1, 2, 3, 5]
+    input <- spikeSourceArray [1 .. 100]
     a <- population 5 if_current_exponential_default "a" True
     b <- population 10 if_current_exponential_default "b" False
     c <- population 5 if_current_exponential_default "c" False
@@ -18,16 +27,36 @@ net = do
 
 izhikevich :: Monad m => SNN () m
 izhikevich = do
-    spike_source <- spikeSourceArray [10.0 .. 51]
+    spike_source <- spikeSourceArray [10 .. 51]
     neurons <- population 3 izhikevich_default "neurons" False
     output <- fileOutput "out.txt"
     projection (OneToOne 3.0) (Static Excitatory) spike_source neurons
     return ()
+       
+netTest :: SNN () Identity
+netTest = net
 
-net2 :: Monad m => SNN () m
-net2 = do
-    input <- spikeSourceArray spikeTimes
-    cells <- population 20 if_cond_alpha_default "cells" True
-    projection (FixedProbability 0.5) (Static Excitatory) input cells
-    where spikeTimes = undefined
-                            
+toTask :: SNN () Identity -> ExecutionTarget -> Double -> Task
+toTask model target runtime =
+  Task {
+      _executionTarget = target,
+      _simulationTime = runtime,
+      _network = Network {
+          _blocks = [block]
+      }
+  }
+  where (_, block) = runState model initialBlockState
+
+taskToJSON :: Task -> String
+taskToJSON = B.unpack . encodePretty . toJSON
+
+exampleTask =
+    Task {
+        _executionTarget = Nest 0.1 0.5,
+        _simulationTime = 100.0,
+        _network = Network {
+            _blocks = [block]
+        }
+    }
+    where (_, block) = runState netTest initialBlockState
+    
