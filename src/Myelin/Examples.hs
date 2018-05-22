@@ -16,6 +16,13 @@ net = do
     output <- fileOutput "out.txt"
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
+izhikevich :: Monad m => SNN () m
+izhikevich = do
+    spike_source <- spikeSourceArray [10.0 .. 51]
+    neurons <- population 3 izhikevich_default "neurons" False
+    output <- fileOutput "out.txt"
+    projection (OneToOne 3.0) (Static Excitatory) spike_source neurons
+    return ()
 
 net2 :: Monad m => SNN () m
 net2 = do
