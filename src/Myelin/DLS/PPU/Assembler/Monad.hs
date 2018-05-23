@@ -34,6 +34,9 @@ type Asm a m = StateT AsmState m a
 
 makeLenses ''AsmState
 
+asm :: Monad m => [Inst] -> Asm () m
+asm inst = instructions <>= inst
+
 allocateRegister :: Monad m => Asm Register m
 allocateRegister = do
     fr <- use freeRegisters
@@ -124,6 +127,52 @@ block retainedRegisters retainedVectorRegisters action = do
     where 
         releasedRegisters = Set.difference [A.R0 .. A.R31] retainedRegisters
         releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
+
+-- ^ create a stack frame of n words according to the powerpc-eabi convention
+createStackFrame :: Monad m => 
+    Word32 -- ^ size of stack frame (in words) to be created
+    -> Asm () m
+createStackFrame n = asm 
+    [
+        A.stwu A.R1 A.R1 (-n), -- stwu r1, -N(r1)
+        A.mflr A.R0, -- mflr r0
+        A.stw A.R0 A.R1 (n+4) -- stw r0, N+4(r1)
+    ]
+
+-- ^ remove a stack frame of n words according to the powerpc-eabi convention
+removeStackFrame :: Monad m => 
+    Word32 -- ^ size of stack frame (in words) to be removed
+    -> Asm () m
+removeStackFrame n = asm
+    [
+        A.lwz A.R0 A.R1 (n+4), -- lwz    r0, N+4(r1)
+        A.addi A.R1 A.R1 n, -- addi   r1, r1, N
+        A.mtlr A.R0 -- mtlr r0
+        -- A.blr -- blr
+    ]
+
+restoreRegisters :: Monad m => [A.Register] -> Asm () m
+restoreRegisters regs = do
+    undefined
+    undefined
+    
+storeRegisters :: Monad m => [A.Register] -> Asm () m
+storeRegisters regs = do
+    -- stw    r31, N-4(r1)
+    -- stw    r30, N-8(r1)
+    -- stw    r29, N-12(r1)
+    undefined
+    undefined
+
+functionPrologue :: Monad m => Asm () m
+functionPrologue = do
+    createStackFrame 64
+    storeRegisters [A.R14 .. A.R31]
+
+functionEpilogue :: Monad m => Asm () m
+functionEpilogue = do
+    restoreRegisters [A.R14 .. A.R31]
+    removeStackFrame 64
 
 iop :: Monad m => (Word32 -> Bool -> Bool -> A.Inst)
     -> Word32 

@@ -689,6 +689,12 @@ mtocrf rt spr = XFX Op_alu_xo rt spr Xop_mtocrf
 mfspr  rt spr = XFX Op_alu_xo rt spr Xop_mfspr
 mtspr  rt spr = XFX Op_alu_xo rt spr Xop_mtspr
 
+-- ^ move from link register
+mflr r = mfspr r (SpecialPurposeRegister 8)
+
+-- ^ move to link register
+mtlr r = mtspr r (SpecialPurposeRegister 8)
+
 data Fxv_opcd = 
     Xop_fxvmahm         -- ^ fixed-vector-multiply-accumulate-halfword-modulo
     | Xop_fxvmabm       -- ^ fixed-vector-multiply-accumulate-byte-modulo
