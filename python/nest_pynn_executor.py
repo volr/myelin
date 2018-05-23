@@ -11,14 +11,20 @@ from pyNN.utility import init_logging
 init_logging("logfile", debug=False)
 
 def create_edge(nodes, edge):
-    """ 
-    
+    """
+    Create a pyNN edge.
+
+    Args:
+        nodes: Graph nodes that have been created so far.
+        edge: pyNN edge to be created.
     """
     projection_type = edge.projection_type.kind
     
     if projection_type == "all_to_all" and isinstance(nodes[edge.output.id], pynn.Population):
         assert(edge.projection_target.kind == 'static') # only support static connectivity for now
         target = edge.projection_target.effect
+        # TODO(Christian): This API has changed in the most recent version of
+        #                  pynn
         projection = pynn.Projection(
             nodes[edge.input.id],
             nodes[edge.output.id],
@@ -34,7 +40,10 @@ def create_edge(nodes, edge):
 
 def create_population(node):
     """
+    Create a pyNN population.
 
+    Args:
+        node: Parameters of the population to be created.
     """
     neuron = node.neuron_type
     neuron_model = None
@@ -67,7 +76,10 @@ def create_population(node):
 
 def create_node(node):
     """
+    Create a node in the pyNN graph.
 
+    Args:
+        node: Node to be created.
     """
     kind = node.type
     if (kind == "population"):
@@ -87,7 +99,10 @@ def create_node(node):
 
 def spikes_to_json(spikes):
     """
+    Convert spikes to json format.
 
+    Args:
+        spikes: Spikes as an array of tuples.
     """
     spiking_neurons = defaultdict(list)
     for spike in spikes:
@@ -96,7 +111,12 @@ def spikes_to_json(spikes):
     return spiking_neurons.values()
 
 def execute(conf):
-    # NEST specific stuff
+    """ 
+    Execute a pyNN experiment.
+
+    Args:
+        conf: The configuration object of the whole experiment.
+    """
     pynn.setup()
 
     net = conf.network
