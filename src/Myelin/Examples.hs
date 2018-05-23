@@ -15,9 +15,9 @@ import Myelin.SNN
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1 .. 100]
-    a <- population 5 if_current_exponential_default "a" True
-    b <- population 10 if_current_exponential_default "b" False
-    c <- population 5 if_current_exponential_default "c" False
+    a <- population 5 if_current_exponential "a" True
+    b <- population 10 if_current_exponential "b" False
+    c <- population 5 if_current_exponential "c" False
     projection (AllToAll 1.0 False) (Static Excitatory) input a
     projection (AllToAll 1.0 False) (Static Excitatory) a b
     projection (AllToAll 1.0 False) (Static Excitatory) b c
@@ -25,10 +25,10 @@ net = do
     output <- fileOutput "out.txt"
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
-izhikevich :: Monad m => SNN () m
-izhikevich = do
+net2 :: Monad m => SNN () m
+net2 = do
     spike_source <- spikeSourceArray [10 .. 51]
-    neurons <- population 3 izhikevich_default "neurons" False
+    neurons <- population 3 izhikevich "neurons" False
     output <- fileOutput "out.txt"
     projection (OneToOne 3.0) (Static Excitatory) spike_source neurons
     return ()
