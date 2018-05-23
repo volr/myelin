@@ -14,7 +14,7 @@ ex2 :: Monad m => Asm A.VectorRegister m
 ex2 = do
     a <- allocateVectorRegister
     b <- allocateVectorRegister
-    M.fxvaddbm a b A.Fxv_cond_null
+    M.fxvaddbm a b
 
 ex :: Monad m => Asm () m
 ex = do

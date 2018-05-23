@@ -31,13 +31,13 @@ readWeights weight_base row = do
 readCorrelation base row ca_offset = do
     co <- M.fxvinx base row
     M.fxvshb_ co (-1) A.Fxv_cond_null
-    M.fxvsubbfs_ co ca_offset A.Fxv_cond_null
+    M.fxvsubbfs_ co ca_offset
     return co
 
 readAntiCorrelation base row ac_offset = do
     ac <- M.fxvinx base row
     M.fxvshb_ ac (-1) A.Fxv_cond_null
-    M.fxvsubbfs_ ac ac_offset A.Fxv_cond_null
+    M.fxvsubbfs_ ac ac_offset
     return ac
 
 resetCorrelation :: Monad m => A.VectorRegister -> A.Register -> A.Register -> Asm () m
@@ -52,14 +52,14 @@ readSynapseCorrelations select ca_base ac_base row ca_offset ac_offset = do
 -- ^ implementation of one row update stdp using the monadic assembler api
 stdpRow select ca_base ac_base weight_base ca_offset ac_offset factors decay_factors zeros index = do
     (co, ac) <- readSynapseCorrelations select ca_base ac_base index ca_offset ac_offset
-    sum <- M.fxvaddbfs co ac A.Fxv_cond_null
-    dw <- M.fxvmulbfs sum factors A.Fxv_cond_null
+    sum <- M.fxvaddbfs co ac
+    dw <- M.fxvmulbfs sum factors
     w <- readWeights weight_base index
     -- apply weight decay
-    decay <- M.fxvmulbfs w decay_factors A.Fxv_cond_null
-    M.fxvsubbfs_ w decay A.Fxv_cond_null
+    decay <- M.fxvmulbfs w decay_factors
+    M.fxvsubbfs_ w decay
     -- stdp update
-    M.fxvaddbfs_ w dw A.Fxv_cond_null
+    M.fxvaddbfs_ w dw
     r <- M.fxvsel w zeros A.Fxv_cond_gt
     -- save shifted weights
     writeWeights weight_base index r
