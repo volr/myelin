@@ -538,22 +538,72 @@ xo_asm Xop_add    = "add"
 xo_asm Xop_divwu  = "divwu"
 xo_asm Xop_divw   = "divw"
 
-subfc  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfc  
-addc   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addc   
-mulhwu rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mulhwu 
-subf   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subf   
-mulhw  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mulhw  
-neg    rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_neg    
-subfe  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfe  
-adde   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_adde   
-subfze rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfze 
-addze  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addze  
-subfme rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_subfme 
-addme  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_addme  
-mullw  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_mullw  
-add    rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_add    
-divwu  rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_divwu  
-divw   rt ra rb oe = XO Op_alu_xo rt ra rb oe Xop_divw   
+xo_asm_suffix oe rc = (if oe then "o" else "") <> (if rc then "'" else "")
+
+subfc    rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfc False
+subfc'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfc True
+subfco   rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfc False
+subfco'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfc True  
+addc     rt ra rb = XO Op_alu_xo rt ra rb False Xop_addc False
+addc'    rt ra rb = XO Op_alu_xo rt ra rb False Xop_addc True
+addco    rt ra rb = XO Op_alu_xo rt ra rb True Xop_addc False
+addco'   rt ra rb = XO Op_alu_xo rt ra rb True Xop_addc True   
+mulhwu   rt ra rb = XO Op_alu_xo rt ra rb False Xop_mulhwu False
+mulhwu'  rt ra rb = XO Op_alu_xo rt ra rb False Xop_mulhwu True
+mulhwuo  rt ra rb = XO Op_alu_xo rt ra rb True Xop_mulhwu False
+mulhwuo' rt ra rb = XO Op_alu_xo rt ra rb True Xop_mulhwu True 
+subf     rt ra rb = XO Op_alu_xo rt ra rb False Xop_subf False
+subf'    rt ra rb = XO Op_alu_xo rt ra rb False Xop_subf True
+subfo    rt ra rb = XO Op_alu_xo rt ra rb True Xop_subf False
+subfo'   rt ra rb = XO Op_alu_xo rt ra rb True Xop_subf True   
+mulhw    rt ra rb = XO Op_alu_xo rt ra rb False Xop_mulhw False
+mulhw'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_mulhw True
+mulhwo   rt ra rb = XO Op_alu_xo rt ra rb True Xop_mulhw False
+mulhwo'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_mulhw True  
+neg      rt ra rb = XO Op_alu_xo rt ra rb False Xop_neg False
+neg'     rt ra rb = XO Op_alu_xo rt ra rb False Xop_neg True
+nego     rt ra rb = XO Op_alu_xo rt ra rb True Xop_neg False
+nego'    rt ra rb = XO Op_alu_xo rt ra rb True Xop_neg True    
+subfe    rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfe False
+subfe'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfe True
+subfeo   rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfe False
+subfeo'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfe True  
+adde     rt ra rb = XO Op_alu_xo rt ra rb False Xop_adde False
+adde'    rt ra rb = XO Op_alu_xo rt ra rb False Xop_adde True
+addeo    rt ra rb = XO Op_alu_xo rt ra rb True Xop_adde False
+addeo'   rt ra rb = XO Op_alu_xo rt ra rb True Xop_adde True   
+subfze   rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfze False
+subfze'  rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfze True
+subfzeo  rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfze False
+subfzeo' rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfze True 
+addze    rt ra rb = XO Op_alu_xo rt ra rb False Xop_addze False
+addze'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_addze True
+addzeo   rt ra rb = XO Op_alu_xo rt ra rb True Xop_addze False
+addzeo'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_addze True  
+subfme   rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfme False
+subfme'  rt ra rb = XO Op_alu_xo rt ra rb False Xop_subfme True
+subfmeo  rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfme False
+subfmeo' rt ra rb = XO Op_alu_xo rt ra rb True Xop_subfme True 
+addme    rt ra rb = XO Op_alu_xo rt ra rb False Xop_addme False
+addme'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_addme True
+addmeo   rt ra rb = XO Op_alu_xo rt ra rb True Xop_addme False
+addmeo'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_addme True  
+mullw    rt ra rb = XO Op_alu_xo rt ra rb False Xop_mullw False
+mullw'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_mullw True
+mullwo   rt ra rb = XO Op_alu_xo rt ra rb True Xop_mullw False
+mullwo'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_mullw True  
+add      rt ra rb = XO Op_alu_xo rt ra rb False Xop_add False
+add'     rt ra rb = XO Op_alu_xo rt ra rb False Xop_add True
+addo     rt ra rb = XO Op_alu_xo rt ra rb True Xop_add False
+addo'    rt ra rb = XO Op_alu_xo rt ra rb True Xop_add True    
+divwu    rt ra rb = XO Op_alu_xo rt ra rb False Xop_divwu False
+divwu'   rt ra rb = XO Op_alu_xo rt ra rb False Xop_divwu True
+divwuo   rt ra rb = XO Op_alu_xo rt ra rb True Xop_divwu False
+divwuo'  rt ra rb = XO Op_alu_xo rt ra rb True Xop_divwu True  
+divw     rt ra rb = XO Op_alu_xo rt ra rb False Xop_divw False
+divw'    rt ra rb = XO Op_alu_xo rt ra rb False Xop_divw True
+divwo    rt ra rb = XO Op_alu_xo rt ra rb True Xop_divw False
+divwo'   rt ra rb = XO Op_alu_xo rt ra rb True Xop_divw True   
 
 data Xl_opcd = 
     Xxop_mcrf     
@@ -1028,16 +1078,19 @@ encode inst = case inst of
 
 assembleInstruction :: Inst -> Builder
 assembleInstruction inst = case inst of
-    I {..} -> ""
-    B {..} -> asm_opcode _opcd <> " " <> reg _bo <> " " <> reg _bi <> " "
-    D {..} -> asm_opcode _opcd <> " " <> reg _rt <> " " <> reg _ra <> " " <> (string8 . show $ _d)
-    XO {..} -> xo_asm _xo <> " " <> reg _rt <> " " <> reg _ra <> " " <> reg _rb
-    X {..} -> x_asm _x <> " " <> reg _rt <> " " <> reg _ra <> " " <> reg _rb
+    I {..} -> asm_opcode _opcd <> " " <> (string8 . show $ (_li:: Word32))
+    B {..} -> asm_opcode _opcd <> " " <> reg _bo <> ", " <> reg _bi <> " "
+    D {..} -> asm_opcode _opcd <> " " <> reg _rt <> ", " <> reg _ra <> ", " <> (string8 . show $ (_d :: Word32))
+    XO {..} -> xo_asm _xo <> xo_asm_suffix _oe _rc <> " " <> reg _rt <> ", " <> reg _ra <> ", " <> reg _rb
+    X {..} -> x_asm _x <> " " <> reg _rt <> ", " <> reg _ra <> ", " <> reg _rb
     M {..} -> ""
-    XFX {..} -> xfx_asm _xfx <> " " <> reg _rt <> " " <> sreg _spr
-    XL {..} -> xl_asm _xl <> " " <> reg _bt <> " " <> reg _ba <> " " <> reg _bb
-    FXV {..} -> fxv_asm _fxv <> " " <> vreg _vrt <> " " <> vreg _vra <> " " <> vreg _vrb
-    FXVS {..} -> fxv_asm _fxv <> " " <> vreg _vrt <> " " <> reg _ra <> " " <> reg _rb
+    XFX {..} -> xfx_asm _xfx <> " " <> reg _rt <> ", " <> sreg _spr
+    XL {..} -> xl_asm _xl <> " " <> reg _bt <> ", " <> reg _ba <> ", " <> reg _bb
+    FXV {..} -> fxv_asm _fxv <> " " <> vreg _vrt <> ", " <> vreg _vra <> ", " <> vreg _vrb
+    FXVS {..} -> fxv_asm _fxv <> " " <> vreg _vrt <> ", " <> reg _ra <> ", " <> reg _rb
     where vreg = string8 . show . encodeVectorRegister
           reg = string8 . show . encodeRegister
           sreg = string8 . show . encodeSpecialPurposeRegister
+
+assembleInstructions :: [Inst] -> Builder
+assembleInstructions = mconcat . map (\inst -> assembleInstruction inst <> "\n")

@@ -8,7 +8,7 @@ ex1 :: Monad m => Asm A.Register m
 ex1 = do
     a <- allocateRegister
     b <- allocateRegister
-    M.add a b False False
+    M.add a b
 
 ex2 :: Monad m => Asm A.VectorRegister m
 ex2 = do
