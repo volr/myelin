@@ -13,8 +13,8 @@ main = hspec spec
 asm :: [Inst]
 asm =
     [
-      addc R0 R1 R2 False False,
-      add R1 R2 R3 False False
+      addc R0 R1 R2,
+      add R1 R2 R3
     ]
 
 bin :: [Word32]

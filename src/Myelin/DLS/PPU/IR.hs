@@ -1,56 +1,85 @@
-{-# LANGUAGE GADTs, RebindableSyntax #-}
+{-# LANGUAGE GADTs, RebindableSyntax, DataKinds, NoImplicitPrelude #-}
 module Myelin.DLS.PPU.IR where
 
+import Prelude hiding ((<))
 import Control.Lens
 import Data.Word
 import Myelin.DLS.PPU.Assembler.Monad as M
 import Myelin.DLS.PPU.Assembler as A
-import Prelude
-
+{- 
 type IRLabel = Int
 
-data Value =
-      V Word32
-    | L IRLabel
-    deriving (Show)
+data ScalarType = Address | Word | Halfword | Byte | Immediate
+data ScalarArithmetic = Signed | Unsigned
+data VectorArithmetic = FractionalSaturating | Modulo
+data VectorType = VectorType ScalarType VectorArithmetic
+
+type FXVHFS = VectorType Halfword FractionalSaturating
+fxvhfs = VectorType Halfword FractionalSaturating
+type FXVHM = VectorType Halfword Modulo
+fxvhm = VectorType Halfword Modulo
+type FXVBFS = VectorType Byte FractionalSaturating
+fxvbfs = VectorType Byte FractionalSaturating
+type FXVBM = VectorType Byte Modulo
+fxvbm = VectorType Byte Modulo
+
+data I a = I IR
 
 data IR where
-    Nop :: IR -> IR
-    Identity :: IR -> IR
-    Add :: IR -> IR -> IR
-    Sub :: IR -> IR -> IR
-    Mul :: IR -> IR -> IR
-    Div :: IR -> IR -> IR
-    Mod :: IR -> IR -> IR 
-    Neg :: IR -> IR
-    BitAnd :: IR -> IR -> IR
-    BitOr :: IR -> IR -> IR
-    BitXor :: IR -> IR -> IR
-    Shl :: IR -> IR -> IR
-    SShr :: IR -> IR -> IR
-    ZShr :: IR -> IR -> IR
-    RotR :: IR -> IR -> IR
-    RotL :: IR -> IR -> IR
-    Equal :: IR -> IR -> IR
-    NotEqual :: IR -> IR -> IR
-    LessThan :: IR -> IR -> IR
-    GreaterThan :: IR -> IR -> IR
-    LessEqual :: IR -> IR -> IR
-    GreaterEqual :: IR -> IR -> IR
-    Abs :: IR -> IR
-    Signum :: IR -> IR
-    Select :: IR -> IR -> IR -> IR
-    Load :: IR -> IR
-    Store :: IR -> IR
-    CCall :: IR -> IR -- ^ call a c function
-    Upsilon :: IR -> IR
-    Phi :: IR
-    Branch :: IR
-    Jump :: IR -> IR
-    Return :: IR -> IR
+    Nop :: Type -> IR -> IR
+    Identity :: Type -> IR -> IR
+    Add :: Type -> IR -> IR -> IR
+    Sub :: Type -> IR -> IR -> IR
+    Mul :: Type -> IR -> IR -> IR
+    Div :: Type -> IR -> IR -> IR
+    Mod :: Type -> IR -> IR -> IR 
+    Neg :: Type -> IR -> IR
+    BitAnd :: Type -> IR -> IR -> IR
+    BitOr :: Type -> IR -> IR -> IR
+    BitXor :: Type -> IR -> IR -> IR
+    Shl :: Type -> IR -> IR -> IR
+    SShr :: Type -> IR -> IR -> IR
+    ZShr :: Type -> IR -> IR -> IR
+    RotR :: Type -> IR -> IR -> IR
+    RotL :: Type -> IR -> IR -> IR
+    Equal :: Type -> IR -> IR -> IR
+    NotEqual :: Type -> IR -> IR -> IR
+    LessThan :: Type -> IR -> IR -> IR
+    GreaterThan :: Type -> IR -> IR -> IR
+    LessEqual :: Type -> IR -> IR -> IR
+    GreaterEqual :: Type -> IR -> IR -> IR
+    Abs :: Type -> IR -> IR
+    Signum :: Type -> IR -> IR
+    Select :: Type -> IR -> IR -> IR -> IR
+    Load :: Type -> IR -> IR
+    Store :: Type -> IR -> IR
+    CCall :: Type -> IR -> IR -- ^ call a c function
+    Upsilon :: Type -> IR -> IR
+    Phi :: Type -> IR
+    Branch :: Type -> IR
+    Jump :: Type -> IR -> IR
+    Return :: Type -> IR -> IR
+    -- 
+    Splat :: Type -> IR -> IR
     -- 
     Value :: Value -> IR
     deriving (Show)
+
+instance Num (I FXVHFS) where
+    (+) = Add fxvhfs
+    (*) = Mul fxvhfs
+    (-) = Sub fxvhfs
+    abs = Abs fxvhfs
+    signum = Abs fxvhs
+    fromInteger i = Splat fxvhfs $ Value . V . fromIntegral
+
+instance Num (I FXVBFS) where
+    (+) = Add fxvbfs
+    (*) = Mul fxvbfs
+    (-) = Sub fxvbfs
+    abs = Abs fxvbfs
+    signum = Abs fxvbfs
+    fromInteger i = Splat fxvbfs $ Value . V . fromIntegral
 
 instance Num IR where
     (+) = Add
@@ -98,4 +127,4 @@ genAsm (Select a b c) = do
     b' <- genAsm b
     c' <- genAsm c 
     undefined
-
+-}
