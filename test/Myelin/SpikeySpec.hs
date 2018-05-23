@@ -1,6 +1,7 @@
 module Myelin.SpikeySpec where
 
 import Myelin.SNN
+import Myelin.Examples
 import Myelin.Spikey
 
 import Test.Hspec

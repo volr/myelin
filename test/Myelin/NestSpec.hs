@@ -3,6 +3,7 @@ module Myelin.NestSpec where
 
 import Myelin.SNN
 import Myelin.NEST
+import Myelin.Examples
 import Data.Foldable
 import Data.ByteString.Lazy (ByteString)
 
