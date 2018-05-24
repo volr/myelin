@@ -1,4 +1,3 @@
-
 import nest
 
 node_key_filters = [
@@ -27,6 +26,7 @@ node_key_filters = [
     'linear_summation',
     'consistent_integration',
     'Interpol_Order',
+    'events',
 ]
 
 def to_camel_case(str):
@@ -81,39 +81,13 @@ def discover(node_type):
     return result
 
 if __name__ == '__main__':
-    print('-------- neurons -----------')
-    neurons = discover('neuron')
+    nodes = discover('neuron') + discover('recorder') + discover('stimulator')
 
     res = []
     defaults = []
-    for neuron in neurons:
-        res.append(neuron.type_declaration())
-        defaults.append(neuron.default_declaration())
+    for node in nodes:
+        res.append(node.type_declaration())
+        defaults.append(node.default_declaration())
 
-    print("data Neuron =\n    {0}".format('\n    | '.join(res)))
-    print('\n'.join(defaults))
-    
-    
-    print('-------- recorders ---------')    
-    recorders = discover('recorder')
-
-    res = []
-    defaults = []
-    for recorder in recorders:
-        res.append(recorder.type_declaration())
-        defaults.append(recorder.default_declaration())
-
-    print("data Recorder =\n    {0}".format('\n    | '.join(res)))
-    print('\n'.join(defaults))
-    
-    print('-------- stimulators -------')
-    stimulators = discover('stimulator')
-
-    res = []
-    defaults = []
-    for stimulator in stimulators:
-        res.append(stimulator.type_declaration())
-        defaults.append(stimulator.default_declaration())
-
-    print("data Stimulator =\n    {0}".format('\n    | '.join(res)))
+    print("data Node =\n    {0}".format('\n    | '.join(res)))
     print('\n'.join(defaults))
