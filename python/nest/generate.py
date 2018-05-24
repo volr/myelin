@@ -29,6 +29,13 @@ node_key_filters = [
     'events',
 ]
 
+synapse_key_filters = [
+    'sizeof',
+    'label',
+    'synapse_model',
+    'weight_recorder'
+]
+
 def to_camel_case(str):
     components = str.split('_')
     return ''.join(x.title() for x in components)
@@ -59,7 +66,7 @@ class Node:
         return "{0} {1}".format(to_camel_case(self.name), self.params)
         
 
-def discover(node_type):
+def discover_nodes(node_type):
     nodes = nest.Models(mtype = 'nodes')
     result = []
 
@@ -80,8 +87,24 @@ def discover(node_type):
             # print(node.default_declaration())
     return result
 
+def discover_synapses():
+    synapses = nest.Models(mtype = 'synapses')
+    result = []
+
+    def params(defaults):
+        return {k:v for k,v in defaults.items() if k not in synapse_key_filters}
+
+    for synapse in synapses:
+        defaults = nest.GetDefaults(synapse)
+        # print(synapse)
+        # print(params(defaults))
+        result.append(Node(synapse, params(defaults)))
+
+    return result
+
 if __name__ == '__main__':
-    nodes = discover('neuron') + discover('recorder') + discover('stimulator')
+
+    nodes = discover_nodes('neuron') + discover_nodes('recorder') + discover_nodes('stimulator')
 
     res = []
     defaults = []
@@ -90,4 +113,17 @@ if __name__ == '__main__':
         defaults.append(node.default_declaration())
 
     print("data Node =\n    {0}".format('\n    | '.join(res)))
+    print('\n'.join(defaults))
+
+    print("-------------------------")
+                      
+    synapses = discover_synapses()
+
+    res = []
+    defaults = []
+    for synapse in synapses:
+        res.append(synapse.type_declaration())
+        defaults.append(synapse.default_declaration())
+
+    print("data Synapse =\n    {0}".format('\n    | '.join(res)))
     print('\n'.join(defaults))
