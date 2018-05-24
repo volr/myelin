@@ -1,3 +1,14 @@
 #!/bin/bash
 
-sudo apt install -y libarchive-dev autotools-dev libgsl-dev libopenmpi-dev automake
+sudo apt install -y \
+     build-essential \
+     curl \
+     git \
+     sudo \
+     autoconf \
+     libtool \
+     automake \
+     libarchive-dev \
+     libgsl-dev \
+     libopenmpi-dev \
+     python-tk
