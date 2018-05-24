@@ -88,7 +88,7 @@ def create_population(node):
     neuron_model = None
 
     def cellparams(neuron):
-        {k:v for k,v in neuron.items() if k not in ["type"]}
+        return {k:v for k,v in neuron.items() if k not in ["type"]}
 
     if neuron.type == 'IFCurrentAlpha':        
         neuron_model = pynn.IF_curr_alpha()
