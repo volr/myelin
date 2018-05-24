@@ -18,25 +18,46 @@ def create_edge(nodes, edge):
         nodes: Graph nodes that have been created so far.
         edge: pyNN edge to be created.
     """
-    projection_type = edge.projection_type.kind
-    
-    if projection_type == "all_to_all" and isinstance(nodes[edge.output.id], pynn.Population):
-        assert(edge.projection_target.kind == 'static') # only support static connectivity for now
-        target = edge.projection_target.effect
-        # TODO(Christian): This API has changed in the most recent version of
-        #                  pynn
-        projection = pynn.Projection(
-            nodes[edge.input.id],
-            nodes[edge.output.id],
-            method=pynn.AllToAllConnector(),
-            target=target)
-        weight = edge.projection_type.weight
-        if edge.projection_target.effect == 'inhibitory' and weight > 0:
-            weight = weight * -1
 
-        projection.setWeights(weight)
+    if not isinstance(nodes[edge.output.id], pynn.Population):
+        return None
+
+    projection_type = edge.projection_type.kind
+    method = None
+
+    if projection_type == 'all_to_all':
+        method = pynn.AllToAllConnector()
+    elif projection_type == 'one_to_one':
+        method = pynn.OneToOneConnector()
+    elif projection_type == 'fixed_number_post':
+        method = pynn.FixedNumberPostConnector(n = edge.projection_type.n)
+    elif projection_type == 'fixed_number_pre':
+        method = pynn.FixedNumberPostConnector(n = edge.projection_type.n)
+    elif projection_type == 'fixed_probability':
+        method = pynn.FixedProbabilityConnector()
+    elif projection_type == 'from_list':
+        method = pynn.FromListConnector(conn_list = edge.projection_type.conn_list)
     else:
+        assert False # unreachable
         print("not yet supported")
+
+    assert(edge.projection_target.kind == 'static') # only support static connectivity for now
+    target = edge.projection_target.effect
+    projection = pynn.Projection(
+        nodes[edge.input.id],
+        nodes[edge.output.id],
+        method=method,
+        target=target
+    )
+
+    # TODO(Christian): Refactor this!
+    weight = edge.projection_type.weight
+    if edge.projection_target.effect == 'inhibitory' and weight > 0:
+        weight = weight * -1
+
+    projection.setWeights(weight)
+
+    return projection
 
 def create_population(node):
     """
@@ -44,6 +65,9 @@ def create_population(node):
 
     Args:
         node: Parameters of the population to be created.
+
+    Returns:
+        pyNN Population that has been created.
     """
     neuron = node.neuron_type
     neuron_model = None
@@ -79,7 +103,10 @@ def create_node(node):
     Create a node in the pyNN graph.
 
     Args:
-        node: Node to be created.
+        node: Parameters for node to be created.
+
+    Returns:
+        Node that has been created.
     """
     kind = node.type
     if (kind == "population"):
@@ -116,6 +143,9 @@ def execute(conf):
 
     Args:
         conf: The configuration object of the whole experiment.
+
+    Returns:
+        Outputs that have been produced by the execution.
     """
     pynn.setup()
 
