@@ -1,9 +1,5 @@
 import nest
 
-def snake_to_camel_case(string):
-   first, *rest = string.split('_')
-   return first + ''.join(word.capitalize() for word in rest)
-
 node_key_filters = [
     'recordables',
     'type_id',
@@ -20,14 +16,19 @@ node_key_filters = [
     'local',
     'frozen',
     'element_type',
+    'thread',
+    'model',
+    'archiver_length',
+    'global_id',
+    'capacity',
 ]
 
 def discover(node_type):
     nodes = nest.Models(mtype = 'nodes')
     result = []
 
-    def params(node):
-        {k:v for k,v in node.items() if k not in node_key_filters}
+    def params(defaults):
+        return {k:v for k,v in defaults.items() if k not in node_key_filters}
 
     for node in nodes:
         if (node == 'sli_neuron'):
@@ -37,7 +38,7 @@ def discover(node_type):
             print(node)            
         if (defaults['element_type'] == node_type):
             print(node)
-            print(params(node))
+            print(params(defaults))
             result.append(node)
     return result
 
