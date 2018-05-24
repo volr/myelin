@@ -1,5 +1,5 @@
-
 import pyNN.nest as pynn
+import pyNN
 
 from collections import defaultdict
 import argparse
@@ -17,38 +17,53 @@ def create_edge(nodes, edge):
     Args:
         nodes: Graph nodes that have been created so far.
         edge: pyNN edge to be created.
+
+    Returns:
+        The pyNN projection that was created.
     """
 
     if not isinstance(nodes[edge.output.id], pynn.Population):
         return None
 
     projection_type = edge.projection_type.kind
-    method = None
+    connector = None
+    projection = None
+    synapse_type = None # TODO(Christian): pyNN does not support a lot of synapse types natively
 
     if projection_type == 'all_to_all':
-        method = pynn.AllToAllConnector()
+        connector = pynn.AllToAllConnector()
     elif projection_type == 'one_to_one':
-        method = pynn.OneToOneConnector()
+        connector = pynn.OneToOneConnector()
     elif projection_type == 'fixed_number_post':
-        method = pynn.FixedNumberPostConnector(n = edge.projection_type.n)
+        connector = pynn.FixedNumberPostConnector(n = edge.projection_type.n)
     elif projection_type == 'fixed_number_pre':
-        method = pynn.FixedNumberPostConnector(n = edge.projection_type.n)
+        connector = pynn.FixedNumberPostConnector(n = edge.projection_type.n)
     elif projection_type == 'fixed_probability':
-        method = pynn.FixedProbabilityConnector()
+        connector = pynn.FixedProbabilityConnector(p_connect = edge.projection_type.probability)
     elif projection_type == 'from_list':
-        method = pynn.FromListConnector(conn_list = edge.projection_type.conn_list)
+        connector = pynn.FromListConnector(conn_list = edge.projection_type.weights)
     else:
         assert False # unreachable
-        print("not yet supported")
 
     assert(edge.projection_target.kind == 'static') # only support static connectivity for now
     target = edge.projection_target.effect
-    projection = pynn.Projection(
-        nodes[edge.input.id],
-        nodes[edge.output.id],
-        method=method,
-        target=target
-    )
+
+    # TODO(Christian): This is a hack,think of something better
+    if pyNN.__version__ == '0.7.6':
+        projection = pynn.Projection(
+            nodes[edge.input.id],
+            nodes[edge.output.id],
+            method = connector,
+            target = target
+        )
+    elif pyNN.__version__ == '0.9.2':
+        projection = pynn.Projection(
+            nodes[edge.input.id],
+            nodes[edge.output.id],
+            connector = connector
+        )
+    else:
+        assert False
 
     # TODO(Christian): Refactor this!
     weight = edge.projection_type.weight
@@ -67,7 +82,7 @@ def create_population(node):
         node: Parameters of the population to be created.
 
     Returns:
-        pyNN Population that has been created.
+        The pyNN Population that was created.
     """
     neuron = node.neuron_type
     neuron_model = None
