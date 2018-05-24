@@ -113,26 +113,26 @@ releaseTemporaryVectorRegister r = do
     freeVectorRegisters <>= [r]
 
 retainVectorRegisters :: Monad m => Set VectorRegister -> Asm () m
-retainVectorRegisters retainedVectorRegisters = 
+retainVectorRegisters retainedVectorRegisters =
     releaseVectorRegisters releasedVectorRegisters
     where releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
 
 block :: Monad m => Set Register -> Set VectorRegister -> ([Register] -> [VectorRegister] -> Asm a m) -> Asm a m
 block retainedRegisters retainedVectorRegisters action = do
-    releaseVectorRegisters releasedVectorRegisters 
+    releaseVectorRegisters releasedVectorRegisters
     releaseRegisters releasedRegisters
     r <- Set.elems <$> use usedRegisters
     vr <- Set.elems <$> use usedVectorRegisters
     action r vr
-    where 
+    where
         releasedRegisters = Set.difference [A.R0 .. A.R31] retainedRegisters
         releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
 
 -- ^ create a stack frame of n words according to the powerpc-eabi convention
-createStackFrame :: Monad m => 
+createStackFrame :: Monad m =>
     Word32 -- ^ size of stack frame (in words) to be created
     -> Asm () m
-createStackFrame n = asm 
+createStackFrame n = asm
     [
         A.stwu A.R1 A.R1 (-n), -- stwu r1, -N(r1)
         A.mflr A.R0, -- mflr r0
@@ -140,7 +140,7 @@ createStackFrame n = asm
     ]
 
 -- ^ remove a stack frame of n words according to the powerpc-eabi convention
-removeStackFrame :: Monad m => 
+removeStackFrame :: Monad m =>
     Word32 -- ^ size of stack frame (in words) to be removed
     -> Asm () m
 removeStackFrame n = asm
@@ -155,7 +155,7 @@ restoreRegisters :: Monad m => [A.Register] -> Asm () m
 restoreRegisters regs = do
     undefined
     undefined
-    
+
 storeRegisters :: Monad m => [A.Register] -> Asm () m
 storeRegisters regs = do
     -- stw    r31, N-4(r1)
@@ -175,24 +175,24 @@ functionEpilogue = do
     removeStackFrame 64
 
 iop :: Monad m => (Word32 -> Bool -> Bool -> A.Inst)
-    -> Word32 
-    -> Bool 
-    -> Bool 
+    -> Word32
+    -> Bool
+    -> Bool
     -> Asm () m
 iop op li aa lk = instructions <>= [op li aa lk]
 
-bop :: Monad m => (Register -> Register -> Word32 -> Bool -> Bool -> A.Inst) 
-    -> Register 
+bop :: Monad m => (Register -> Register -> Word32 -> Bool -> Bool -> A.Inst)
     -> Register
-    -> Word32 
-    -> Bool 
-    -> Bool 
+    -> Register
+    -> Word32
+    -> Bool
+    -> Bool
     -> Asm () m
 bop op bo bi bd aa lk = instructions <>= [inst]
     where inst = op bo bi bd aa lk
 
-dop :: Monad m => (Register -> Register -> Word32 -> A.Inst) 
-    -> Register 
+dop :: Monad m => (Register -> Register -> Word32 -> A.Inst)
+    -> Register
     -> Word32
     -> Asm Register m
 dop op ra d = do
@@ -200,14 +200,14 @@ dop op ra d = do
     instructions <>= [op rt ra d]
     return rt
 
-dop_ :: Monad m => (Register -> Register -> Word32 -> A.Inst) 
-    -> Register 
+dop_ :: Monad m => (Register -> Register -> Word32 -> A.Inst)
+    -> Register
     -> Word32
     -> Asm () m
 dop_ op ra d = instructions <>= [op ra ra d]
 
 xoop :: Monad m => (Register -> Register -> Register -> A.Inst)
-    -> Register 
+    -> Register
     -> Register
     -> Asm Register m
 xoop op ra rb = do
@@ -216,15 +216,15 @@ xoop op ra rb = do
     return rt
 
 xoop_ :: Monad m => (Register -> Register -> Register -> A.Inst)
-    -> Register 
+    -> Register
     -> Register
     -> Asm () m
 xoop_ op ra rb = instructions <>= [op ra ra rb]
 
 xop :: Monad m => (Register -> Register -> Register -> Bool -> A.Inst)
-    -> Register 
-    -> Register 
-    -> Bool 
+    -> Register
+    -> Register
+    -> Bool
     -> Asm Register m
 xop op ra rb rc = do
     rt <- allocateRegister
@@ -232,83 +232,83 @@ xop op ra rb rc = do
     return rt
 
 xop_ :: Monad m => (Register -> Register -> Register -> Bool -> A.Inst)
-    -> Register 
-    -> Register 
-    -> Bool 
+    -> Register
+    -> Register
+    -> Bool
     -> Asm () m
 xop_ op ra rb rc = instructions <>= [op ra ra rb rc]
 
 -- mop :: Register -> Register -> Register -> Register -> Register -> Bool -> Asm ()
 
-xfxop :: Monad m => Register 
-      -> SpecialPurposeRegister 
+xfxop :: Monad m => Register
+      -> SpecialPurposeRegister
       -> Asm () m
 xfxop = undefined
 
-xlop :: Monad m => (Register -> Register -> Register -> Bool -> A.Inst) 
-    -> Register 
-    -> Register 
-    -> Register 
-    -> Bool 
+xlop :: Monad m => (Register -> Register -> Register -> Bool -> A.Inst)
+    -> Register
+    -> Register
+    -> Register
+    -> Bool
     -> Asm () m
 xlop op bt ba bb lk = instructions <>= [op bt ba bb lk]
 
-fxvop' :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst) 
-    -> VectorRegister 
-    -> VectorRegister 
-    -> A.Fxv_cond 
+fxvop' :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst)
+    -> VectorRegister
+    -> VectorRegister
+    -> A.Fxv_cond
     -> Asm VectorRegister m
 fxvop' op ra rb cond = do
     rt <- allocateVectorRegister
-    instructions <>= [op rt ra rb cond] 
+    instructions <>= [op rt ra rb cond]
     return rt
 
-fxvop'_ :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst) 
-       -> VectorRegister 
-       -> VectorRegister 
-       -> A.Fxv_cond 
+fxvop'_ :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Fxv_cond -> A.Inst)
+       -> VectorRegister
+       -> VectorRegister
+       -> A.Fxv_cond
        -> Asm () m
 fxvop'_ op ra rb cond = instructions <>= [op ra ra rb cond]
 
-fxvop :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Inst) 
-    -> VectorRegister 
+fxvop :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Inst)
+    -> VectorRegister
     -> VectorRegister
     -> Asm VectorRegister m
 fxvop op ra rb = do
     rt <- allocateVectorRegister
-    instructions <>= [op rt ra rb] 
+    instructions <>= [op rt ra rb]
     return rt
 
-fxvop_ :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Inst) 
-       -> VectorRegister 
-       -> VectorRegister 
+fxvop_ :: Monad m => (VectorRegister -> VectorRegister -> VectorRegister -> A.Inst)
+       -> VectorRegister
+       -> VectorRegister
        -> Asm () m
 fxvop_ op ra rb = instructions <>= [op ra ra rb]
 
-fxviop :: Monad m => (VectorRegister -> VectorRegister -> Int8 -> A.Fxv_cond -> A.Inst) 
-    -> VectorRegister 
+fxviop :: Monad m => (VectorRegister -> VectorRegister -> Int8 -> A.Fxv_cond -> A.Inst)
+    -> VectorRegister
     -> Int8
-    -> A.Fxv_cond 
+    -> A.Fxv_cond
     -> Asm VectorRegister m
 fxviop op ra imm cond = do
     rt <- allocateVectorRegister
-    instructions <>= [op rt ra imm cond] 
+    instructions <>= [op rt ra imm cond]
     return rt
 
-fxviop_ :: Monad m => (VectorRegister -> VectorRegister -> Int8 -> A.Fxv_cond -> A.Inst) 
-    -> VectorRegister 
+fxviop_ :: Monad m => (VectorRegister -> VectorRegister -> Int8 -> A.Fxv_cond -> A.Inst)
+    -> VectorRegister
     -> Int8
-    -> A.Fxv_cond 
+    -> A.Fxv_cond
     -> Asm () m
 fxviop_ op ra imm cond = instructions <>= [op ra ra imm cond]
 
-fxvsop :: Monad m => (VectorRegister -> Register -> Register -> A.Inst) 
+fxvsop :: Monad m => (VectorRegister -> Register -> Register -> A.Inst)
     -> Register
-    -> Register 
+    -> Register
     -> Asm VectorRegister m
 fxvsop op ra rb = do
     rt <- allocateVectorRegister
-    instructions <>= [op rt ra rb] 
+    instructions <>= [op rt ra rb]
     return rt
 
 -- D Instruction Format
@@ -322,16 +322,16 @@ addic       :: Monad m => Register -> Word32 -> Asm Register m
 addic_rec   :: Monad m => Register -> Word32 -> Asm Register m
 addi        :: Monad m => Register -> Word32 -> Asm Register m
 addis       :: Monad m => Register -> Word32 -> Asm Register m
-twi         = dop A.twi         
-mulli       = dop A.mulli       
-subfic      = dop A.subfic      
-syncmpi_rec = dop A.syncmpi_rec 
-cmpli       = dop A.cmpli       
-cmpi        = dop A.cmpi        
-addic       = dop A.addic       
-addic_rec   = dop A.addic_rec   
-addi        = dop A.addi        
-addis       = dop A.addis       
+twi         = dop A.twi
+mulli       = dop A.mulli
+subfic      = dop A.subfic
+syncmpi_rec = dop A.syncmpi_rec
+cmpli       = dop A.cmpli
+cmpi        = dop A.cmpi
+addic       = dop A.addic
+addic_rec   = dop A.addic_rec
+addi        = dop A.addi
+addis       = dop A.addis
 --
 bc :: Monad m => Register -> Register -> Word32 -> Bool -> Bool -> Asm () m
 bc = bop A.bc
@@ -365,28 +365,28 @@ lmw    :: Monad m => Register -> Word32 -> Asm Register m
 stmw   :: Monad m => Register -> Word32 -> Asm Register m
 rlwimi = dop A.rlwimi
 rlwinm = dop A.rlwinm
-rlwnm  = dop A.rlwnm 
-ori    = dop A.ori   
-oris   = dop A.oris  
-xori   = dop A.xori  
-xoris  = dop A.xoris 
-andi   = dop A.andi  
-andis  = dop A.andis 
-lwz    = dop A.lwz   
-lwzu   = dop A.lwzu  
-lbz    = dop A.lbz   
-lbzu   = dop A.lbzu  
-stw    = dop A.stw   
-stwu   = dop A.stwu  
-stb    = dop A.stb   
-stbu   = dop A.stbu  
-lhz    = dop A.lhz   
-lhzu   = dop A.lhzu  
-lha    = dop A.lha   
-lhau   = dop A.lhau  
-sth    = dop A.sth   
-sthu   = dop A.sthu  
-lmw    = dop A.lmw   
+rlwnm  = dop A.rlwnm
+ori    = dop A.ori
+oris   = dop A.oris
+xori   = dop A.xori
+xoris  = dop A.xoris
+andi   = dop A.andi
+andis  = dop A.andis
+lwz    = dop A.lwz
+lwzu   = dop A.lwzu
+lbz    = dop A.lbz
+lbzu   = dop A.lbzu
+stw    = dop A.stw
+stwu   = dop A.stwu
+stb    = dop A.stb
+stbu   = dop A.stbu
+lhz    = dop A.lhz
+lhzu   = dop A.lhzu
+lha    = dop A.lha
+lhau   = dop A.lhau
+sth    = dop A.sth
+sthu   = dop A.sthu
+lmw    = dop A.lmw
 stmw   = dop A.stmw
 rlwimi_ :: Monad m => Register -> Word32 -> Asm () m
 rlwinm_ :: Monad m => Register -> Word32 -> Asm () m
@@ -415,28 +415,28 @@ lmw_    :: Monad m => Register -> Word32 -> Asm () m
 stmw_   :: Monad m => Register -> Word32 -> Asm () m
 rlwimi_ = dop_ A.rlwimi
 rlwinm_ = dop_ A.rlwinm
-rlwnm_  = dop_ A.rlwnm 
-ori_    = dop_ A.ori   
-oris_   = dop_ A.oris  
-xori_   = dop_ A.xori  
-xoris_  = dop_ A.xoris 
-andi_   = dop_ A.andi  
-andis_  = dop_ A.andis 
-lwz_    = dop_ A.lwz   
-lwzu_   = dop_ A.lwzu  
-lbz_    = dop_ A.lbz   
-lbzu_   = dop_ A.lbzu  
-stw_    = dop_ A.stw   
-stwu_   = dop_ A.stwu  
-stb_    = dop_ A.stb   
-stbu_   = dop_ A.stbu  
-lhz_    = dop_ A.lhz   
-lhzu_   = dop_ A.lhzu  
-lha_    = dop_ A.lha   
-lhau_   = dop_ A.lhau  
-sth_    = dop_ A.sth   
-sthu_   = dop_ A.sthu  
-lmw_    = dop_ A.lmw   
+rlwnm_  = dop_ A.rlwnm
+ori_    = dop_ A.ori
+oris_   = dop_ A.oris
+xori_   = dop_ A.xori
+xoris_  = dop_ A.xoris
+andi_   = dop_ A.andi
+andis_  = dop_ A.andis
+lwz_    = dop_ A.lwz
+lwzu_   = dop_ A.lwzu
+lbz_    = dop_ A.lbz
+lbzu_   = dop_ A.lbzu
+stw_    = dop_ A.stw
+stwu_   = dop_ A.stwu
+stb_    = dop_ A.stb
+stbu_   = dop_ A.stbu
+lhz_    = dop_ A.lhz
+lhzu_   = dop_ A.lhzu
+lha_    = dop_ A.lha
+lhau_   = dop_ A.lhau
+sth_    = dop_ A.sth
+sthu_   = dop_ A.sthu
+lmw_    = dop_ A.lmw
 stmw_   = dop_ A.stmw
 
 -- X Instruction Format
@@ -493,59 +493,59 @@ sraw    :: Monad m => Register -> Register -> Bool -> Asm Register m
 srawi   :: Monad m => Register -> Register -> Bool -> Asm Register m
 extsh   :: Monad m => Register -> Register -> Bool -> Asm Register m
 extsb   :: Monad m => Register -> Register -> Bool -> Asm Register m
-cmp     = xop A.cmp     
-tw      = xop A.tw      
-lwzx    = xop A.lwzx    
-slw     = xop A.slw     
-cntlzw  = xop A.cntlzw  
-and     = xop A.and     
-cmpl    = xop A.cmpl    
-nvem    = xop A.nvem    
-nves    = xop A.nves    
-nvemtl  = xop A.nvemtl  
-lwzux   = xop A.lwzux   
-andc    = xop A.andc    
-wait    = xop A.wait    
-mfmsr   = xop A.mfmsr   
-lbzx    = xop A.lbzx    
-lbzux   = xop A.lbzux   
-popcb   = xop A.popcb   
-nor     = xop A.nor     
-mtmsr   = xop A.mtmsr   
-stwx    = xop A.stwx    
-prtyw   = xop A.prtyw   
-stwux   = xop A.stwux   
-stbx    = xop A.stbx    
-stbux   = xop A.stbux   
-lhzx    = xop A.lhzx    
-eqv     = xop A.eqv     
-eciwx   = xop A.eciwx   
-lhzux   = xop A.lhzux   
-xor     = xop A.xor     
-lhax    = xop A.lhax    
-lhaux   = xop A.lhaux   
-sthx    = xop A.sthx    
-orc     = xop A.orc     
-ecowx   = xop A.ecowx   
-sthux   = xop A.sthux   
-or      = xop A.or      
-nand    = xop A.nand    
-srw     = xop A.srw     
-sync    = xop A.sync    
-synm    = xop A.synm    
-syns    = xop A.syns    
-synmtl  = xop A.synmtl  
-synmtvr = xop A.synmtvr 
-synmfvr = xop A.synmfvr 
-synmtp  = xop A.synmtp  
-synmfp  = xop A.synmfp  
-synmvvr = xop A.synmvvr 
-synops  = xop A.synops  
-synswp  = xop A.synswp  
-sraw    = xop A.sraw    
-srawi   = xop A.srawi   
-extsh   = xop A.extsh   
-extsb   = xop A.extsb 
+cmp     = xop A.cmp
+tw      = xop A.tw
+lwzx    = xop A.lwzx
+slw     = xop A.slw
+cntlzw  = xop A.cntlzw
+and     = xop A.and
+cmpl    = xop A.cmpl
+nvem    = xop A.nvem
+nves    = xop A.nves
+nvemtl  = xop A.nvemtl
+lwzux   = xop A.lwzux
+andc    = xop A.andc
+wait    = xop A.wait
+mfmsr   = xop A.mfmsr
+lbzx    = xop A.lbzx
+lbzux   = xop A.lbzux
+popcb   = xop A.popcb
+nor     = xop A.nor
+mtmsr   = xop A.mtmsr
+stwx    = xop A.stwx
+prtyw   = xop A.prtyw
+stwux   = xop A.stwux
+stbx    = xop A.stbx
+stbux   = xop A.stbux
+lhzx    = xop A.lhzx
+eqv     = xop A.eqv
+eciwx   = xop A.eciwx
+lhzux   = xop A.lhzux
+xor     = xop A.xor
+lhax    = xop A.lhax
+lhaux   = xop A.lhaux
+sthx    = xop A.sthx
+orc     = xop A.orc
+ecowx   = xop A.ecowx
+sthux   = xop A.sthux
+or      = xop A.or
+nand    = xop A.nand
+srw     = xop A.srw
+sync    = xop A.sync
+synm    = xop A.synm
+syns    = xop A.syns
+synmtl  = xop A.synmtl
+synmtvr = xop A.synmtvr
+synmfvr = xop A.synmfvr
+synmtp  = xop A.synmtp
+synmfp  = xop A.synmfp
+synmvvr = xop A.synmvvr
+synops  = xop A.synops
+synswp  = xop A.synswp
+sraw    = xop A.sraw
+srawi   = xop A.srawi
+extsh   = xop A.extsh
+extsb   = xop A.extsb
 cmp_     :: Monad m => Register -> Register -> Bool -> Asm () m
 tw_      :: Monad m => Register -> Register -> Bool -> Asm () m
 lwzx_    :: Monad m => Register -> Register -> Bool -> Asm () m
@@ -599,59 +599,59 @@ sraw_    :: Monad m => Register -> Register -> Bool -> Asm () m
 srawi_   :: Monad m => Register -> Register -> Bool -> Asm () m
 extsh_   :: Monad m => Register -> Register -> Bool -> Asm () m
 extsb_   :: Monad m => Register -> Register -> Bool -> Asm () m
-cmp_     = xop_ A.cmp     
-tw_      = xop_ A.tw      
-lwzx_    = xop_ A.lwzx    
-slw_     = xop_ A.slw     
-cntlzw_  = xop_ A.cntlzw  
-and_     = xop_ A.and     
-cmpl_    = xop_ A.cmpl    
-nvem_    = xop_ A.nvem    
-nves_    = xop_ A.nves    
-nvemtl_  = xop_ A.nvemtl  
-lwzux_   = xop_ A.lwzux   
-andc_    = xop_ A.andc    
-wait_    = xop_ A.wait    
-mfmsr_   = xop_ A.mfmsr   
-lbzx_    = xop_ A.lbzx    
-lbzux_   = xop_ A.lbzux   
-popcb_   = xop_ A.popcb   
-nor_     = xop_ A.nor     
-mtmsr_   = xop_ A.mtmsr   
-stwx_    = xop_ A.stwx    
-prtyw_   = xop_ A.prtyw   
-stwux_   = xop_ A.stwux   
-stbx_    = xop_ A.stbx    
-stbux_   = xop_ A.stbux   
-lhzx_    = xop_ A.lhzx    
-eqv_     = xop_ A.eqv     
-eciwx_   = xop_ A.eciwx   
-lhzux_   = xop_ A.lhzux   
-xor_     = xop_ A.xor     
-lhax_    = xop_ A.lhax    
-lhaux_   = xop_ A.lhaux   
-sthx_    = xop_ A.sthx    
-orc_     = xop_ A.orc     
-ecowx_   = xop_ A.ecowx   
-sthux_   = xop_ A.sthux   
-or_      = xop_ A.or      
-nand_    = xop_ A.nand    
-srw_     = xop_ A.srw     
-sync_    = xop_ A.sync    
-synm_    = xop_ A.synm    
-syns_    = xop_ A.syns    
-synmtl_  = xop_ A.synmtl  
-synmtvr_ = xop_ A.synmtvr 
-synmfvr_ = xop_ A.synmfvr 
-synmtp_  = xop_ A.synmtp  
-synmfp_  = xop_ A.synmfp  
-synmvvr_ = xop_ A.synmvvr 
-synops_  = xop_ A.synops  
-synswp_  = xop_ A.synswp  
-sraw_    = xop_ A.sraw    
-srawi_   = xop_ A.srawi   
-extsh_   = xop_ A.extsh   
-extsb_   = xop_ A.extsb 
+cmp_     = xop_ A.cmp
+tw_      = xop_ A.tw
+lwzx_    = xop_ A.lwzx
+slw_     = xop_ A.slw
+cntlzw_  = xop_ A.cntlzw
+and_     = xop_ A.and
+cmpl_    = xop_ A.cmpl
+nvem_    = xop_ A.nvem
+nves_    = xop_ A.nves
+nvemtl_  = xop_ A.nvemtl
+lwzux_   = xop_ A.lwzux
+andc_    = xop_ A.andc
+wait_    = xop_ A.wait
+mfmsr_   = xop_ A.mfmsr
+lbzx_    = xop_ A.lbzx
+lbzux_   = xop_ A.lbzux
+popcb_   = xop_ A.popcb
+nor_     = xop_ A.nor
+mtmsr_   = xop_ A.mtmsr
+stwx_    = xop_ A.stwx
+prtyw_   = xop_ A.prtyw
+stwux_   = xop_ A.stwux
+stbx_    = xop_ A.stbx
+stbux_   = xop_ A.stbux
+lhzx_    = xop_ A.lhzx
+eqv_     = xop_ A.eqv
+eciwx_   = xop_ A.eciwx
+lhzux_   = xop_ A.lhzux
+xor_     = xop_ A.xor
+lhax_    = xop_ A.lhax
+lhaux_   = xop_ A.lhaux
+sthx_    = xop_ A.sthx
+orc_     = xop_ A.orc
+ecowx_   = xop_ A.ecowx
+sthux_   = xop_ A.sthux
+or_      = xop_ A.or
+nand_    = xop_ A.nand
+srw_     = xop_ A.srw
+sync_    = xop_ A.sync
+synm_    = xop_ A.synm
+syns_    = xop_ A.syns
+synmtl_  = xop_ A.synmtl
+synmtvr_ = xop_ A.synmtvr
+synmfvr_ = xop_ A.synmfvr
+synmtp_  = xop_ A.synmtp
+synmfp_  = xop_ A.synmfp
+synmvvr_ = xop_ A.synmvvr
+synops_  = xop_ A.synops
+synswp_  = xop_ A.synswp
+sraw_    = xop_ A.sraw
+srawi_   = xop_ A.srawi
+extsh_   = xop_ A.extsh
+extsb_   = xop_ A.extsb
 
 -- XO Instruction Format
 subfc    :: Monad m => Register -> Register -> Asm Register m
@@ -721,63 +721,63 @@ divwo'   :: Monad m => Register -> Register -> Asm Register m
 subfc    = xoop A.subfc
 subfc'   = xoop A.subfc'
 subfco   = xoop A.subfco
-subfco'  = xoop A.subfco'  
+subfco'  = xoop A.subfco'
 addc     = xoop A.addc
 addc'    = xoop A.addc'
 addco    = xoop A.addco
-addco'   = xoop A.addco'   
+addco'   = xoop A.addco'
 mulhwu   = xoop A.mulhwu
 mulhwu'  = xoop A.mulhwu'
 mulhwuo  = xoop A.mulhwuo
-mulhwuo' = xoop A.mulhwuo' 
+mulhwuo' = xoop A.mulhwuo'
 subf     = xoop A.subf
 subf'    = xoop A.subf'
 subfo    = xoop A.subfo
-subfo'   = xoop A.subfo'   
+subfo'   = xoop A.subfo'
 mulhw    = xoop A.mulhw
 mulhw'   = xoop A.mulhw'
 mulhwo   = xoop A.mulhwo
-mulhwo'  = xoop A.mulhwo'  
+mulhwo'  = xoop A.mulhwo'
 neg      = xoop A.neg
 neg'     = xoop A.neg'
 nego     = xoop A.nego
-nego'    = xoop A.nego'    
+nego'    = xoop A.nego'
 subfe    = xoop A.subfe
 subfe'   = xoop A.subfe'
 subfeo   = xoop A.subfeo
-subfeo'  = xoop A.subfeo'  
+subfeo'  = xoop A.subfeo'
 adde     = xoop A.adde
 adde'    = xoop A.adde'
 addeo    = xoop A.addeo
-addeo'   = xoop A.addeo'   
+addeo'   = xoop A.addeo'
 subfze   = xoop A.subfze
 subfze'  = xoop A.subfze'
 subfzeo  = xoop A.subfzeo
-subfzeo' = xoop A.subfzeo' 
+subfzeo' = xoop A.subfzeo'
 addze    = xoop A.addze
 addze'   = xoop A.addze'
 addzeo   = xoop A.addzeo
-addzeo'  = xoop A.addzeo'  
+addzeo'  = xoop A.addzeo'
 subfme   = xoop A.subfme
 subfme'  = xoop A.subfme'
 subfmeo  = xoop A.subfmeo
-subfmeo' = xoop A.subfmeo' 
+subfmeo' = xoop A.subfmeo'
 addme    = xoop A.addme
 addme'   = xoop A.addme'
 addmeo   = xoop A.addmeo
-addmeo'  = xoop A.addmeo'  
+addmeo'  = xoop A.addmeo'
 mullw    = xoop A.mullw
 mullw'   = xoop A.mullw'
 mullwo   = xoop A.mullwo
-mullwo'  = xoop A.mullwo'  
+mullwo'  = xoop A.mullwo'
 add      = xoop A.add
 add'     = xoop A.add'
 addo     = xoop A.addo
-addo'    = xoop A.addo'    
+addo'    = xoop A.addo'
 divwu    = xoop A.divwu
 divwu'   = xoop A.divwu'
 divwuo   = xoop A.divwuo
-divwuo'  = xoop A.divwuo'  
+divwuo'  = xoop A.divwuo'
 divw     = xoop A.divw
 divw'    = xoop A.divw'
 divwo    = xoop A.divwo
@@ -849,63 +849,63 @@ divwo'_   :: Monad m => Register -> Register -> Asm () m
 subfc_  = xoop_ A.subfc
 subfc'_  = xoop_ A.subfc'
 subfco_  = xoop_ A.subfco
-subfco'_  = xoop_ A.subfco'  
+subfco'_  = xoop_ A.subfco'
 addc_   = xoop_ A.addc
 addc'_   = xoop_ A.addc
 addco_   = xoop_ A.addc
-addco'_   = xoop_ A.addc   
+addco'_   = xoop_ A.addc
 mulhwu_ = xoop_ A.mulhwu
 mulhwu'_ = xoop_ A.mulhwu
 mulhwuo_ = xoop_ A.mulhwu
-mulhwuo'_ = xoop_ A.mulhwu 
+mulhwuo'_ = xoop_ A.mulhwu
 subf_   = xoop_ A.subf
 subf'_   = xoop_ A.subf
 subfo_   = xoop_ A.subf
-subfo'_   = xoop_ A.subf   
+subfo'_   = xoop_ A.subf
 mulhw_  = xoop_ A.mulhw
 mulhw'_  = xoop_ A.mulhw
 mulhwo_  = xoop_ A.mulhw
-mulhwo'_  = xoop_ A.mulhw  
+mulhwo'_  = xoop_ A.mulhw
 neg_    = xoop_ A.neg
 neg'_    = xoop_ A.neg
 nego_    = xoop_ A.neg
-nego'_    = xoop_ A.neg    
+nego'_    = xoop_ A.neg
 subfe_  = xoop_ A.subfe
 subfe'_  = xoop_ A.subfe
 subfeo_  = xoop_ A.subfe
-subfeo'_  = xoop_ A.subfe  
+subfeo'_  = xoop_ A.subfe
 adde_   = xoop_ A.adde
 adde'_   = xoop_ A.adde
 addeo_   = xoop_ A.adde
-addeo'_   = xoop_ A.adde   
+addeo'_   = xoop_ A.adde
 subfze_ = xoop_ A.subfze
 subfze'_ = xoop_ A.subfze
 subfzeo_ = xoop_ A.subfze
-subfzeo'_ = xoop_ A.subfze 
+subfzeo'_ = xoop_ A.subfze
 addze_  = xoop_ A.addze
 addze'_  = xoop_ A.addze
 addzeo_  = xoop_ A.addze
-addzeo'_  = xoop_ A.addze  
+addzeo'_  = xoop_ A.addze
 subfme_ = xoop_ A.subfme
 subfme'_ = xoop_ A.subfme
 subfmeo_ = xoop_ A.subfme
-subfmeo'_ = xoop_ A.subfme 
+subfmeo'_ = xoop_ A.subfme
 addme_  = xoop_ A.addme
 addme'_  = xoop_ A.addme
 addmeo_  = xoop_ A.addme
-addmeo'_  = xoop_ A.addme  
+addmeo'_  = xoop_ A.addme
 mullw_  = xoop_ A.mullw
 mullw'_  = xoop_ A.mullw
 mullwo_  = xoop_ A.mullw
-mullwo'_  = xoop_ A.mullw  
+mullwo'_  = xoop_ A.mullw
 add_    = xoop_ A.add
 add'_    = xoop_ A.add
 addo_    = xoop_ A.add
-addo'_    = xoop_ A.add    
+addo'_    = xoop_ A.add
 divwu_  = xoop_ A.divwu
 divwu'_  = xoop_ A.divwu
 divwuo_  = xoop_ A.divwu
-divwuo'_  = xoop_ A.divwu  
+divwuo'_  = xoop_ A.divwu
 divw_   = xoop_ A.divw
 divw'_   = xoop_ A.divw
 divwo_   = xoop_ A.divw
@@ -927,27 +927,27 @@ crand  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
 crorc  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
 cror   :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
 bcctr  :: Monad m => Register -> Register -> Register -> Bool -> Asm () m
-mcrf   = xlop A.mcrf   
-bclr   = xlop A.bclr   
-crnor  = xlop A.crnor  
-rfmci  = xlop A.rfmci  
-rfi    = xlop A.rfi    
-rfci   = xlop A.rfci   
-crandc = xlop A.crandc 
-crxor  = xlop A.crxor  
-crnand = xlop A.crnand 
-creqv  = xlop A.creqv  
-crand  = xlop A.crand  
-crorc  = xlop A.crorc  
-cror   = xlop A.cror   
-bcctr  = xlop A.bcctr  
+mcrf   = xlop A.mcrf
+bclr   = xlop A.bclr
+crnor  = xlop A.crnor
+rfmci  = xlop A.rfmci
+rfi    = xlop A.rfi
+rfci   = xlop A.rfci
+crandc = xlop A.crandc
+crxor  = xlop A.crxor
+crnand = xlop A.crnand
+creqv  = xlop A.creqv
+crand  = xlop A.crand
+crorc  = xlop A.crorc
+cror   = xlop A.cror
+bcctr  = xlop A.bcctr
 
 -- XFX Instruction Format
 {-
-mfocrf = xfxop A.mfocrf 
-mtocrf = xfxop A.mtocrf 
-mfspr  = xfxop A.mfspr  
-mtspr  = xfxop A.mtspr  
+mfocrf = xfxop A.mfocrf
+mtocrf = xfxop A.mtocrf
+mfspr  = xfxop A.mfspr
+mtspr  = xfxop A.mtspr
 -}
 
 -- FXV/FXVS Instruction Format
@@ -1043,96 +1043,96 @@ fxvsplatb     :: Monad m => Register             -> Asm VectorRegister m
 fxvshh        :: Monad m => VectorRegister -> Int8 -> A.Fxv_cond -> Asm VectorRegister m
 fxvshb        :: Monad m => VectorRegister -> Int8 -> A.Fxv_cond -> Asm VectorRegister m
 fxvmahm       = fxvop A.fxvmahm
-fxvmahm'      = fxvop' A.fxvmahm'       
+fxvmahm'      = fxvop' A.fxvmahm'
 fxvmabm       = fxvop A.fxvmabm
-fxvmabm'      = fxvop' A.fxvmabm'       
+fxvmabm'      = fxvop' A.fxvmabm'
 fxvmtacb      = fxvop A.fxvmtacb
-fxvmtacb'     = fxvop' A.fxvmtacb'      
+fxvmtacb'     = fxvop' A.fxvmtacb'
 fxvmtach      = fxvop A.fxvmtach
-fxvmtach'     = fxvop' A.fxvmtach'      
+fxvmtach'     = fxvop' A.fxvmtach'
 fxvmahfs      = fxvop A.fxvmahfs
-fxvmahfs'     = fxvop' A.fxvmahfs'      
+fxvmahfs'     = fxvop' A.fxvmahfs'
 fxvmabfs      = fxvop A.fxvmabfs
-fxvmabfs'     = fxvop' A.fxvmabfs'      
+fxvmabfs'     = fxvop' A.fxvmabfs'
 fxvmtacbf     = fxvop A.fxvmtacbf
-fxvmtacbf'    = fxvop' A.fxvmtacbf'     
+fxvmtacbf'    = fxvop' A.fxvmtacbf'
 fxvmtachf     = fxvop A.fxvmtachf
-fxvmtachf'    = fxvop' A.fxvmtachf'     
+fxvmtachf'    = fxvop' A.fxvmtachf'
 fxvmatachm    = fxvop A.fxvmatachm
-fxvmatachm'   = fxvop' A.fxvmatachm'    
+fxvmatachm'   = fxvop' A.fxvmatachm'
 fxvmatacbm    = fxvop A.fxvmatacbm
-fxvmatacbm'   = fxvop' A.fxvmatacbm'    
+fxvmatacbm'   = fxvop' A.fxvmatacbm'
 fxvmatachfs   = fxvop A.fxvmatachfs
-fxvmatachfs'  = fxvop' A.fxvmatachfs'   
+fxvmatachfs'  = fxvop' A.fxvmatachfs'
 fxvmatacbfs   = fxvop A.fxvmatacbfs
-fxvmatacbfs'  = fxvop' A.fxvmatacbfs'   
+fxvmatacbfs'  = fxvop' A.fxvmatacbfs'
 fxvmulhm      = fxvop A.fxvmulhm
-fxvmulhm'     = fxvop' A.fxvmulhm'  
+fxvmulhm'     = fxvop' A.fxvmulhm'
 fxvmulbm      = fxvop A.fxvmulbm
-fxvmulbm'     = fxvop' A.fxvmulbm'      
+fxvmulbm'     = fxvop' A.fxvmulbm'
 fxvmulhfs     = fxvop A.fxvmulhfs
-fxvmulhfs'    = fxvop' A.fxvmulhfs'     
+fxvmulhfs'    = fxvop' A.fxvmulhfs'
 fxvmulbfs     = fxvop A.fxvmulbfs
-fxvmulbfs'    = fxvop' A.fxvmulbfs'     
+fxvmulbfs'    = fxvop' A.fxvmulbfs'
 fxvmultachm   = fxvop A.fxvmultachm
-fxvmultachm'  = fxvop' A.fxvmultachm'   
+fxvmultachm'  = fxvop' A.fxvmultachm'
 fxvmultacbm   = fxvop A.fxvmultacbm
-fxvmultacbm'  = fxvop' A.fxvmultacbm'   
+fxvmultacbm'  = fxvop' A.fxvmultacbm'
 fxvmultachfs  = fxvop A.fxvmultachfs
 fxvmultachfs' = fxvop' A.fxvmultachfs'
 fxvmultacbfs  = fxvop A.fxvmultacbfs
 fxvmultacbfs' = fxvop' A.fxvmultacbfs'
 fxvpckbu      = fxvop' A.fxvpckbu
-fxvpckbl      = fxvop' A.fxvpckbl      
-fxvupckbr     = fxvop' A.fxvupckbr     
-fxvupckbl     = fxvop' A.fxvupckbl     
-fxvcmph       = fxvop' A.fxvcmph       
-fxvcmpb       = fxvop' A.fxvcmpb               
-fxvsel        = fxvop' A.fxvsel        
+fxvpckbl      = fxvop' A.fxvpckbl
+fxvupckbr     = fxvop' A.fxvupckbr
+fxvupckbl     = fxvop' A.fxvupckbl
+fxvcmph       = fxvop' A.fxvcmph
+fxvcmpb       = fxvop' A.fxvcmpb
+fxvsel        = fxvop' A.fxvsel
 fxvsubhm       = fxvop A.fxvsubhm
-fxvsubhm'      = fxvop' A.fxvsubhm'      
+fxvsubhm'      = fxvop' A.fxvsubhm'
 fxvsubbm       = fxvop A.fxvsubbm
-fxvsubbm'      = fxvop' A.fxvsubbm'      
+fxvsubbm'      = fxvop' A.fxvsubbm'
 fxvsubhfs      = fxvop A.fxvsubhfs
-fxvsubhfs'     = fxvop' A.fxvsubhfs'     
+fxvsubhfs'     = fxvop' A.fxvsubhfs'
 fxvsubbfs      = fxvop A.fxvsubbfs
-fxvsubbfs'     = fxvop' A.fxvsubbfs'     
+fxvsubbfs'     = fxvop' A.fxvsubbfs'
 fxvaddactachm  = fxvop A.fxvaddactachm
-fxvaddactachm' = fxvop' A.fxvaddactachm' 
+fxvaddactachm' = fxvop' A.fxvaddactachm'
 fxvaddactacb   = fxvop A.fxvaddactacb
-fxvaddactacb'  = fxvop' A.fxvaddactacb'  
+fxvaddactacb'  = fxvop' A.fxvaddactacb'
 fxvaddactachf  = fxvop A.fxvaddactachf
-fxvaddactachf' = fxvop' A.fxvaddactachf' 
+fxvaddactachf' = fxvop' A.fxvaddactachf'
 fxvaddactacbf  = fxvop A.fxvaddactacbf
-fxvaddactacbf' = fxvop' A.fxvaddactacbf' 
+fxvaddactacbf' = fxvop' A.fxvaddactacbf'
 fxvaddachm     = fxvop A.fxvaddachm
-fxvaddachm'    = fxvop' A.fxvaddachm'    
+fxvaddachm'    = fxvop' A.fxvaddachm'
 fxvaddacbm     = fxvop A.fxvaddacbm
-fxvaddacbm'    = fxvop' A.fxvaddacbm'    
+fxvaddacbm'    = fxvop' A.fxvaddacbm'
 fxvaddachfs    = fxvop A.fxvaddachfs
-fxvaddachfs'   = fxvop' A.fxvaddachfs'   
+fxvaddachfs'   = fxvop' A.fxvaddachfs'
 fxvaddacbfs    = fxvop A.fxvaddacbfs
-fxvaddacbfs'   = fxvop' A.fxvaddacbfs'   
+fxvaddacbfs'   = fxvop' A.fxvaddacbfs'
 fxvaddtachm    = fxvop A.fxvaddtachm
-fxvaddtachm'   = fxvop' A.fxvaddtachm'   
+fxvaddtachm'   = fxvop' A.fxvaddtachm'
 fxvaddtacb     = fxvop A.fxvaddtacb
-fxvaddtacb'    = fxvop' A.fxvaddtacb'    
+fxvaddtacb'    = fxvop' A.fxvaddtacb'
 fxvaddhm       = fxvop A.fxvaddhm
-fxvaddhm'      = fxvop' A.fxvaddhm'      
+fxvaddhm'      = fxvop' A.fxvaddhm'
 fxvaddbm       = fxvop A.fxvaddbm
-fxvaddbm'      = fxvop' A.fxvaddbm'      
+fxvaddbm'      = fxvop' A.fxvaddbm'
 fxvaddhfs      = fxvop A.fxvaddhfs
-fxvaddhfs'     = fxvop' A.fxvaddhfs'     
+fxvaddhfs'     = fxvop' A.fxvaddhfs'
 fxvaddbfs      = fxvop A.fxvaddbfs
 fxvaddbfs'     = fxvop' A.fxvaddbfs'
--- scalar operations     
+-- scalar operations
 fxvinx        = fxvsop A.fxvinx
-fxvoutx vr ra rb = instructions <>= [A.fxvoutx vr ra rb] 
+fxvoutx vr ra rb = instructions <>= [A.fxvoutx vr ra rb]
 fxvlax        = fxvsop A.fxvlax
 fxvstax       = fxvsop A.fxvstax
 fxvsplath ra  = fxvsop (\rt ra rb -> A.fxvsplath rt ra) ra R0
 fxvsplatb ra  = fxvsop (\rt ra rb -> A.fxvsplatb rt ra) ra R0
-fxvshh        = fxviop A.fxvshh        
+fxvshh        = fxviop A.fxvshh
 fxvshb        = fxviop A.fxvshb
 
 fxvmahm_       :: Monad m => VectorRegister -> VectorRegister               -> Asm () m
@@ -1221,86 +1221,86 @@ fxvaddbfs'_     :: Monad m => VectorRegister -> VectorRegister -> A.Fxv_cond -> 
 fxvshh_        :: Monad m => VectorRegister -> Int8 -> A.Fxv_cond -> Asm () m
 fxvshb_        :: Monad m => VectorRegister -> Int8 -> A.Fxv_cond -> Asm () m
 fxvmahm_       = fxvop_ A.fxvmahm
-fxvmahm'_      = fxvop'_ A.fxvmahm'       
+fxvmahm'_      = fxvop'_ A.fxvmahm'
 fxvmabm_       = fxvop_ A.fxvmabm
-fxvmabm'_      = fxvop'_ A.fxvmabm'       
+fxvmabm'_      = fxvop'_ A.fxvmabm'
 fxvmtacb_      = fxvop_ A.fxvmtacb
-fxvmtacb'_     = fxvop'_ A.fxvmtacb'      
+fxvmtacb'_     = fxvop'_ A.fxvmtacb'
 fxvmtach_      = fxvop_ A.fxvmtach
-fxvmtach'_     = fxvop'_ A.fxvmtach'      
+fxvmtach'_     = fxvop'_ A.fxvmtach'
 fxvmahfs_      = fxvop_ A.fxvmahfs
-fxvmahfs'_     = fxvop'_ A.fxvmahfs'      
+fxvmahfs'_     = fxvop'_ A.fxvmahfs'
 fxvmabfs_      = fxvop_ A.fxvmabfs
-fxvmabfs'_     = fxvop'_ A.fxvmabfs'      
+fxvmabfs'_     = fxvop'_ A.fxvmabfs'
 fxvmtacbf_     = fxvop_ A.fxvmtacbf
-fxvmtacbf'_    = fxvop'_ A.fxvmtacbf'     
+fxvmtacbf'_    = fxvop'_ A.fxvmtacbf'
 fxvmtachf_     = fxvop_ A.fxvmtachf
-fxvmtachf'_    = fxvop'_ A.fxvmtachf'     
+fxvmtachf'_    = fxvop'_ A.fxvmtachf'
 fxvmatachm_    = fxvop_ A.fxvmatachm
-fxvmatachm'_   = fxvop'_ A.fxvmatachm'    
+fxvmatachm'_   = fxvop'_ A.fxvmatachm'
 fxvmatacbm_    = fxvop_ A.fxvmatacbm
-fxvmatacbm'_   = fxvop'_ A.fxvmatacbm'    
+fxvmatacbm'_   = fxvop'_ A.fxvmatacbm'
 fxvmatachfs_   = fxvop_ A.fxvmatachfs
-fxvmatachfs'_  = fxvop'_ A.fxvmatachfs'   
+fxvmatachfs'_  = fxvop'_ A.fxvmatachfs'
 fxvmatacbfs_   = fxvop_ A.fxvmatacbfs
-fxvmatacbfs'_  = fxvop'_ A.fxvmatacbfs'   
+fxvmatacbfs'_  = fxvop'_ A.fxvmatacbfs'
 fxvmulhm_      = fxvop_ A.fxvmulhm
-fxvmulhm'_     = fxvop'_ A.fxvmulhm'  
+fxvmulhm'_     = fxvop'_ A.fxvmulhm'
 fxvmulbm_      = fxvop_ A.fxvmulbm
-fxvmulbm'_     = fxvop'_ A.fxvmulbm'      
+fxvmulbm'_     = fxvop'_ A.fxvmulbm'
 fxvmulhfs_     = fxvop_ A.fxvmulhfs
-fxvmulhfs'_    = fxvop'_ A.fxvmulhfs'     
+fxvmulhfs'_    = fxvop'_ A.fxvmulhfs'
 fxvmulbfs_     = fxvop_ A.fxvmulbfs
-fxvmulbfs'_    = fxvop'_ A.fxvmulbfs'     
+fxvmulbfs'_    = fxvop'_ A.fxvmulbfs'
 fxvmultachm_   = fxvop_ A.fxvmultachm
-fxvmultachm'_  = fxvop'_ A.fxvmultachm'   
+fxvmultachm'_  = fxvop'_ A.fxvmultachm'
 fxvmultacbm_   = fxvop_ A.fxvmultacbm
-fxvmultacbm'_  = fxvop'_ A.fxvmultacbm'   
+fxvmultacbm'_  = fxvop'_ A.fxvmultacbm'
 fxvmultachfs_  = fxvop_ A.fxvmultachfs
 fxvmultachfs'_ = fxvop'_ A.fxvmultachfs'
 fxvmultacbfs_  = fxvop_ A.fxvmultacbfs
 fxvmultacbfs'_ = fxvop'_ A.fxvmultacbfs'
 fxvpckbu_      = fxvop'_ A.fxvpckbu
-fxvpckbl_      = fxvop'_ A.fxvpckbl      
-fxvupckbr_     = fxvop'_ A.fxvupckbr     
-fxvupckbl_     = fxvop'_ A.fxvupckbl     
-fxvcmph_       = fxvop'_ A.fxvcmph       
-fxvcmpb_       = fxvop'_ A.fxvcmpb           
-fxvsel_        = fxvop'_ A.fxvsel        
+fxvpckbl_      = fxvop'_ A.fxvpckbl
+fxvupckbr_     = fxvop'_ A.fxvupckbr
+fxvupckbl_     = fxvop'_ A.fxvupckbl
+fxvcmph_       = fxvop'_ A.fxvcmph
+fxvcmpb_       = fxvop'_ A.fxvcmpb
+fxvsel_        = fxvop'_ A.fxvsel
 fxvsubhm_       = fxvop_ A.fxvsubhm
-fxvsubhm'_      = fxvop'_ A.fxvsubhm'      
+fxvsubhm'_      = fxvop'_ A.fxvsubhm'
 fxvsubbm_       = fxvop_ A.fxvsubbm
-fxvsubbm'_      = fxvop'_ A.fxvsubbm'      
+fxvsubbm'_      = fxvop'_ A.fxvsubbm'
 fxvsubhfs_      = fxvop_ A.fxvsubhfs
-fxvsubhfs'_     = fxvop'_ A.fxvsubhfs'     
+fxvsubhfs'_     = fxvop'_ A.fxvsubhfs'
 fxvsubbfs_      = fxvop_ A.fxvsubbfs
-fxvsubbfs'_     = fxvop'_ A.fxvsubbfs'     
+fxvsubbfs'_     = fxvop'_ A.fxvsubbfs'
 fxvaddactachm_  = fxvop_ A.fxvaddactachm
-fxvaddactachm'_ = fxvop'_ A.fxvaddactachm' 
+fxvaddactachm'_ = fxvop'_ A.fxvaddactachm'
 fxvaddactacb_   = fxvop_ A.fxvaddactacb
-fxvaddactacb'_  = fxvop'_ A.fxvaddactacb'  
+fxvaddactacb'_  = fxvop'_ A.fxvaddactacb'
 fxvaddactachf_  = fxvop_ A.fxvaddactachf
-fxvaddactachf'_ = fxvop'_ A.fxvaddactachf' 
+fxvaddactachf'_ = fxvop'_ A.fxvaddactachf'
 fxvaddactacbf_  = fxvop_ A.fxvaddactacbf
-fxvaddactacbf'_ = fxvop'_ A.fxvaddactacbf' 
+fxvaddactacbf'_ = fxvop'_ A.fxvaddactacbf'
 fxvaddachm_     = fxvop_ A.fxvaddachm
-fxvaddachm'_    = fxvop'_ A.fxvaddachm'    
+fxvaddachm'_    = fxvop'_ A.fxvaddachm'
 fxvaddacbm_     = fxvop_ A.fxvaddacbm
-fxvaddacbm'_    = fxvop'_ A.fxvaddacbm'    
+fxvaddacbm'_    = fxvop'_ A.fxvaddacbm'
 fxvaddachfs_    = fxvop_ A.fxvaddachfs
-fxvaddachfs'_   = fxvop'_ A.fxvaddachfs'   
+fxvaddachfs'_   = fxvop'_ A.fxvaddachfs'
 fxvaddacbfs_    = fxvop_ A.fxvaddacbfs
-fxvaddacbfs'_   = fxvop'_ A.fxvaddacbfs'   
+fxvaddacbfs'_   = fxvop'_ A.fxvaddacbfs'
 fxvaddtachm_    = fxvop_ A.fxvaddtachm
-fxvaddtachm'_   = fxvop'_ A.fxvaddtachm'   
+fxvaddtachm'_   = fxvop'_ A.fxvaddtachm'
 fxvaddtacb_     = fxvop_ A.fxvaddtacb
-fxvaddtacb'_    = fxvop'_ A.fxvaddtacb'    
+fxvaddtacb'_    = fxvop'_ A.fxvaddtacb'
 fxvaddhm_       = fxvop_ A.fxvaddhm
-fxvaddhm'_      = fxvop'_ A.fxvaddhm'      
+fxvaddhm'_      = fxvop'_ A.fxvaddhm'
 fxvaddbm_       = fxvop_ A.fxvaddbm
-fxvaddbm'_      = fxvop'_ A.fxvaddbm'      
+fxvaddbm'_      = fxvop'_ A.fxvaddbm'
 fxvaddhfs_      = fxvop_ A.fxvaddhfs
-fxvaddhfs'_     = fxvop'_ A.fxvaddhfs'     
+fxvaddhfs'_     = fxvop'_ A.fxvaddhfs'
 fxvaddbfs_      = fxvop_ A.fxvaddbfs
 fxvaddbfs'_     = fxvop'_ A.fxvaddbfs'
 fxvshh_        = fxviop_ A.fxvshh
