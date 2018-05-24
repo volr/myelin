@@ -35,6 +35,7 @@ dependencies:
 - process
 - containers
 - hmatrix
+- dimensional
 
 library:
   source-dirs: src
