@@ -1,3 +1,4 @@
+
 import nest
 
 node_key_filters = [
@@ -21,7 +22,42 @@ node_key_filters = [
     'archiver_length',
     'global_id',
     'capacity',
+    'has_connections',
+    'is_refractory',
+    'linear_summation',
+    'consistent_integration',
+    'Interpol_Order',
 ]
+
+def to_camel_case(str):
+    components = str.split('_')
+    return ''.join(x.title() for x in components)
+
+
+class Node:
+    def __init__(self,name, params):
+        self.name = name
+        self.params = params
+
+
+    def type_declaration(self):
+        types = {k:type(v).__name__.capitalize() for k,v in self.params.items() }
+        typedecls = []
+        for k,v in types.items():
+            typedecls.append('_{0} :: {1}'.format(k.lower(), v))
+        return '{0} {{\n        {1}\n    }}    '.format(to_camel_case(self.name), ',\n        '.join(typedecls))
+
+    def default_declaration(self):
+        defaultdecls = []
+
+        for k,v in self.params.items():
+            defaultdecls.append('_{0} = {1}'.format(k.lower(), v))
+
+        return '{0} = {1} {{\n    {2}\n}}'.format(self.name, to_camel_case(self.name), ',\n    '.join(defaultdecls))
+
+    def __repr__(self):
+        return "{0} {1}".format(to_camel_case(self.name), self.params)
+        
 
 def discover(node_type):
     nodes = nest.Models(mtype = 'nodes')
@@ -37,16 +73,47 @@ def discover(node_type):
         if (node_type == ''):
             print(node)            
         if (defaults['element_type'] == node_type):
-            print(node)
-            print(params(defaults))
+            # print(node)
+            # print(params(defaults))
+            node = Node(node, params(defaults))
             result.append(node)
+            # print(node.default_declaration())
     return result
 
 if __name__ == '__main__':
     print('-------- neurons -----------')
     neurons = discover('neuron')
-    print('-------- recorders ---------')
+
+    res = []
+    defaults = []
+    for neuron in neurons:
+        res.append(neuron.type_declaration())
+        defaults.append(neuron.default_declaration())
+
+    print("data Neuron =\n    {0}".format('\n    | '.join(res)))
+    print('\n'.join(defaults))
+    
+    
+    print('-------- recorders ---------')    
     recorders = discover('recorder')
+
+    res = []
+    defaults = []
+    for recorder in recorders:
+        res.append(recorder.type_declaration())
+        defaults.append(recorder.default_declaration())
+
+    print("data Recorder =\n    {0}".format('\n    | '.join(res)))
+    print('\n'.join(defaults))
+    
     print('-------- stimulators -------')
     stimulators = discover('stimulator')
 
+    res = []
+    defaults = []
+    for stimulator in stimulators:
+        res.append(stimulator.type_declaration())
+        defaults.append(stimulator.default_declaration())
+
+    print("data Stimulator =\n    {0}".format('\n    | '.join(res)))
+    print('\n'.join(defaults))
