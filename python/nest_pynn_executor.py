@@ -11,12 +11,11 @@ from pyNN.utility import init_logging
 init_logging("logfile", debug=False)
 
 def create_edge(nodes, edge):
-    """
-    Create a pyNN edge.
+    """Create a pyNN edge.
 
     Args:
-        nodes: Graph nodes that have been created so far.
-        edge: pyNN edge to be created.
+        nodes (addict.Dict): Graph nodes that have been created so far.
+        edge (addict.Dict): pyNN edge to be created.
 
     Returns:
         The pyNN projection that was created.
@@ -48,7 +47,7 @@ def create_edge(nodes, edge):
     assert(edge.projection_target.kind == 'static') # only support static connectivity for now
     target = edge.projection_target.effect
 
-    # TODO(Christian): This is a hack,think of something better
+    # TODO(Christian): This is a hack, think of something better
     if pyNN.__version__ == '0.7.6':
         projection = pynn.Projection(
             nodes[edge.input.id],
@@ -75,11 +74,10 @@ def create_edge(nodes, edge):
     return projection
 
 def create_population(node):
-    """
-    Create a pyNN population.
+    """Create a pyNN population.
 
     Args:
-        node: Parameters of the population to be created.
+        node (addict.Dict): Parameters of the population to be created.
 
     Returns:
         The pyNN Population that was created.
@@ -114,11 +112,10 @@ def create_population(node):
     return pynn.Population(node.num_neurons, neuron_model, cellparams=cellparams(neuron))
 
 def create_node(node):
-    """
-    Create a node in the pyNN graph.
+    """Create a node in the pyNN graph.
 
     Args:
-        node: Parameters for node to be created.
+        node (addict.Dict): Parameters for node to be created.
 
     Returns:
         Node that has been created.
@@ -153,11 +150,10 @@ def spikes_to_json(spikes):
     return spiking_neurons.values()
 
 def execute(conf):
-    """ 
-    Execute a pyNN experiment.
+    """ Execute a pyNN experiment.
 
     Args:
-        conf: The configuration object of the whole experiment.
+        conf (addict.Dict): The configuration object of the whole experiment.
 
     Returns:
         Outputs that have been produced by the execution.
