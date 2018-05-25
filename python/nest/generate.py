@@ -1,5 +1,7 @@
 import nest
 
+# Keys that are filtered out because they are read-only or
+# not understood.
 node_key_filters = [
     'recordables',
     'type_id',
@@ -46,12 +48,23 @@ def to_camel_case(str):
 
 
 class Node:
-    def __init__(self,name, params):
+    """Represents one synapse / node that has been discovered
+       using the pyNEST api. Only used to generate a corresponding
+       Haskell default value and type declaration.
+
+       TODO:
+       - Need to make sure that the names that get converted
+         to lowercase are remembered to generate a mapping between
+         Haskell names and python names
+    """
+    def __init__(self, name, params, recordables = []):
         self.name = name
         self.params = params
+        self.recordables = recordables
 
 
     def type_declaration(self):
+        """Generate a string containing a Haskell type declaration."""
         types = {k:type(v).__name__.capitalize() for k,v in self.params.items() }
         typedecls = []
         for k,v in types.items():
@@ -59,6 +72,7 @@ class Node:
         return '{0} {{\n        {1}\n    }}    '.format(to_camel_case(self.name), ',\n        '.join(typedecls))
 
     def default_declaration(self):
+        """Generate a string containing a Haskell value of the defaults for this node."""
         defaultdecls = []
 
         for k,v in self.params.items():
@@ -84,15 +98,12 @@ def discover_nodes(node_type):
         if (node_type == ''):
             print(node)            
         if (defaults['element_type'] == node_type):
-            # print(node)
-            # print(params(defaults))
-            node = Node(node, params(defaults))
-            result.append(node)
-            #try:
-            #    print(defaults['recordables'])
-            #except:
-            #    pass
-            # print(node.default_declaration())
+            recordables = []
+            try:
+                recordables = defaults['recordables']
+            except:
+                pass
+            result.append(Node(node, params(defaults), recordables=recordables))            
     return result
 
 def discover_synapses():
@@ -104,14 +115,12 @@ def discover_synapses():
 
     for synapse in synapses:
         defaults = nest.GetDefaults(synapse)
-        # print(synapse)
-        # print(params(defaults))
         result.append(Node(synapse, params(defaults)))
 
     return result
 
 if __name__ == '__main__':
-
+    # separate calls to have the nodes in order (as oposed to alphabetical)
     nodes = discover_nodes('neuron') + discover_nodes('recorder') + discover_nodes('stimulator')
 
     res = []
@@ -122,8 +131,6 @@ if __name__ == '__main__':
 
     print("data Node =\n    {0}".format('\n    | '.join(res)))
     print('\n'.join(defaults))
-
-    print("-------------------------")
                       
     synapses = discover_synapses()
 
