@@ -3,3 +3,6 @@ myelin.cabal
 *~
 ci/nest-master/
 ci/music-master/
+*.cpython
+__pycache__
+.vscode
