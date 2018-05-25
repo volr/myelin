@@ -9,10 +9,26 @@ python python/nest/generate.py > Types.hs
 -}
 
 import Control.Lens
+import Numeric.LinearAlgebra
 
 type Ndarray = [Float]
 type Tuple = [Float]
 type Str = String
+
+{-
+
+Supported distributions
+
+normal	mu, sigma
+lognormal	mu, sigma
+uniform	low, high
+uniform_int	low, high
+binomial	n, p
+exponential	lambda
+gamma	order, scale
+poisson	lambda
+
+-}
 
 data Synapse =
     BernoulliSynapse {
@@ -729,7 +745,7 @@ data Synapse =
         _tau :: Float,
         _weight :: Float,
         _wmax :: Float
-    }    
+    }
     | VogelsSprekelerSynapseHpc {
         _alpha :: Float,
         _delay :: Float,
@@ -742,7 +758,7 @@ data Synapse =
         _tau :: Float,
         _weight :: Float,
         _wmax :: Float
-    }    
+    }
     | VogelsSprekelerSynapseLbl {
         _alpha :: Float,
         _delay :: Float,
@@ -756,7 +772,7 @@ data Synapse =
         _tau :: Float,
         _weight :: Float,
         _wmax :: Float
-    }    
+    }
 
 makeLenses ''Synapse
 makePrisms ''Synapse
