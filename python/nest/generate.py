@@ -24,16 +24,20 @@ node_key_filters = [
     'has_connections',
     'is_refractory',
     'linear_summation',
-    'consistent_integration',
+    'consistent_integration', # TODO(Christian): Whats this?
     'Interpol_Order',
     'events',
 ]
 
 synapse_key_filters = [
     'sizeof',
-    'label',
+    'label', # TODO(Christian): Shouldn't be filtered probably
     'synapse_model',
     'weight_recorder'
+]
+
+scalar_values = [
+    'gsl_error_tol'
 ]
 
 def to_camel_case(str):
@@ -84,6 +88,10 @@ def discover_nodes(node_type):
             # print(params(defaults))
             node = Node(node, params(defaults))
             result.append(node)
+            #try:
+            #    print(defaults['recordables'])
+            #except:
+            #    pass
             # print(node.default_declaration())
     return result
 
