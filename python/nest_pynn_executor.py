@@ -88,28 +88,32 @@ def create_population(node):
     def cellparams(neuron):
         return {k:v for k,v in neuron.items() if k not in ["type"]}
 
+    # TODO(Christian): This will only work in pyNN 0.9.2
     if neuron.type == 'IFCurrentAlpha':        
-        neuron_model = pynn.IF_curr_alpha()
+        neuron_model = pynn.IF_curr_alpha(**cellparams(neuron))
     elif neuron.type == 'IFCondAlpha':
-        neuron_model = pynn.IF_cond_alpha()
+        neuron_model = pynn.IF_cond_alpha(**cellparams(neuron))
     elif neuron.type == 'IFSpikey':
         assert False # not supported
     elif neuron.type == 'IFCurrExp':
-        neuron_model = pynn.IF_curr_exp()
+        neuron_model = pynn.IF_curr_exp(**cellparams(neuron))
     elif neuron.type == 'IFCondExp' :
-        neuron_model = pynn.IF_cond_exp()
+        neuron_model = pynn.IF_cond_exp(**cellparams(neuron))
     elif neuron.type == 'Izhikevich':
         assert False # not supported
     elif neuron.type == 'EIFCondExp':
-        neuron_model = pynn.EIF_cond_exp_isfa_ista()
+        neuron_model = pynn.EIF_cond_exp_isfa_ista(**cellparams(neuron))
     elif neuron.type == 'EIFCondAlpha':
-        neuron_model = pynn.EIF_cond_alpha_isfa_ista()
+        neuron_model = pynn.EIF_cond_alpha_isfa_ista(**cellparams(neuron))
     elif neuron.type == 'HHCondExp':
-        neuron_model = pynn.HH_cond_exp()
+        neuron_model = pynn.HH_cond_exp(**cellparams(neuron))
     else:
         assert False # unreachable
 
-    return pynn.Population(node.num_neurons, neuron_model, cellparams=cellparams(neuron))
+    if pyNN.__version__ == '0.7.6':
+        return pynn.Population(node.num_neurons, neuron_model, cellparams=cellparams(neuron))
+    elif pyNN.__version__ == '0.9.2':
+        return pynn.Population(node.num_neurons, neuron_model)
 
 def create_node(node):
     """Create a node in the pyNN graph.
@@ -137,8 +141,7 @@ def create_node(node):
         assert False
 
 def spikes_to_json(spikes):
-    """
-    Convert spikes to json format.
+    """Convert spikes to json format.
 
     Args:
         spikes: Spikes as an array of tuples.
@@ -150,7 +153,7 @@ def spikes_to_json(spikes):
     return spiking_neurons.values()
 
 def execute(conf):
-    """ Execute a pyNN experiment.
+    """Execute a pyNN experiment.
 
     Args:
         conf (addict.Dict): The configuration object of the whole experiment.

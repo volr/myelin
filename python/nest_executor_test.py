@@ -12,14 +12,10 @@ def neuron_params(id):
 def edge_params(input, output):
     return addict.Dict({
         'input': {
-            'type': 'aeif_cond_alpha',
-            'num_neurons': 100,
             'id': 1
         },
         'output': {
-            'type': 'aeif_cond_alpha',
-            'num_neurons': 100,
-            'id': 2
+            'id': 2,
         },
         'projection_type': {
             'kind': 'all_to_all'
@@ -27,7 +23,7 @@ def edge_params(input, output):
     })
 
 def create_node_test():
-    node = ne.create_node(neuron_params(1))
+    ne.create_node(neuron_params(1))
 
 def create_edge_test():
     nodes = {}
