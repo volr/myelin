@@ -28,7 +28,6 @@ def edge_params(input, output):
 
 def create_node_test():
     node = ne.create_node(neuron_params(1))
-    assert True
 
 def create_edge_test():
     nodes = {}
@@ -37,8 +36,6 @@ def create_edge_test():
     nodes[1] = ne.create_node(neuron_params(1))
     nodes[2] = ne.create_node(neuron_params(2))
     edges = ne.create_edge(nodes, edge_params(nodes[1], nodes[2]))
-
-    assert True
 
 def execute_test():
     test_case = addict.Dict({
@@ -84,7 +81,7 @@ def execute_test():
                             'projection_type': {
                                 'kind': 'all_to_all',
                             },
-                        }
+                        },
                         {
                             'input': {
                                 'id': 0,
@@ -95,7 +92,7 @@ def execute_test():
                             'projection_type': {
                                 'kind': 'all_to_all',
                             },
-                        }
+                        },
                     ]
                 }
             ]

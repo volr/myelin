@@ -36,28 +36,6 @@ import GHC.Generics
 
 type Label = String
 
-data MusicNode =
-    EventInProxy {
-        _port_name :: String    
-    }
-    | EventOutProxy {
-        _port_name :: String
-    }
-    | ContinuousOutProxy {
-        _port_name :: String,
-        _record_from :: [String],
-        _interval :: Float
-    }
-    | ContinuousInProxy {
-        _port_name :: String
-    }
-    | MessageInProxy {
-        _port_name :: String
-    }
-    | MessageOutProxy {
-        _port_name :: String
-    } deriving (Show, Generic, FromJSON, ToJSON)
-
 -- TODO(Christian): Move Units somewhere else
 type Siemens = Unit Metric DElectricConductance Float
 type Volt = Unit Metric DElectricPotential Float
@@ -905,7 +883,12 @@ spikeSourcePoisson rate start = do
     nodes <>= [spikeSource]
     return spikeSource
 
-population :: Monad m => Integer -> NeuronType -> String -> Bool -> SNN Node m
+population :: Monad m => 
+    Integer -- ^ size of the population
+    -> NeuronType -- ^ type of neuron
+    -> String -- ^ label of the population (used for printing)
+    -> Bool -- ^ whether the population should be recorded
+    -> SNN Node m
 population i typ label recordSpikes = do
     l <- newId
     let pop = Population i typ label l recordSpikes

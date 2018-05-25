@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 module Myelin.Examples where
 
 import Control.Monad.Trans.State
@@ -15,13 +16,17 @@ import Myelin.SNN
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1 .. 100]
-    a <- population 5 if_current_exponential "a" True
+    
+
+    a <- population 5 (if_current_exponential & cm .~ [0.1, 0.3, 0.4, 0.5, 0.6]) "a" True
     b <- population 10 if_current_exponential "b" False
     c <- population 5 if_current_exponential "c" False
+    
     projection (AllToAll 1.0 False) (Static Excitatory) input a
     projection (AllToAll 1.0 False) (Static Excitatory) a b
     projection (AllToAll 1.0 False) (Static Excitatory) b c
     projection (AllToAll 1.0 False) (Static Excitatory) c a
+    
     output <- fileOutput "out.txt"
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
@@ -59,4 +64,3 @@ exampleTask =
         }
     }
     where (_, block) = runState netTest initialBlockState
-    

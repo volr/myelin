@@ -1,8 +1,8 @@
 module Myelin.Nest.Types.Kernel where
 
 data Status = Status {
-    _t_max :: Float, -- T_max
-    _t_min :: Float, -- T_min
+    _t_max :: Float,
+    _t_min :: Float,
     _data_path :: String,
     _data_prefix :: String,
     _dict_miss_is_error :: Bool,
@@ -26,5 +26,5 @@ data Status = Status {
     _tics_per_step :: Int,
     _time :: Float,
     _time_collocate :: Float,
-    _time_communicate :: Float,
+    _time_communicate :: Float
 }

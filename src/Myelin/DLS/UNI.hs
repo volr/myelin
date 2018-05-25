@@ -4,6 +4,8 @@ module Myelin.DLS.UNI where
 import Data.Word
 import Data.Bits
 import Data.Monoid
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.ByteString.Builder
 
 -- very preliminary type definitions
@@ -122,6 +124,11 @@ encodePrimitive op@(Read address) = word8 (opcode op) <> word32LE address
 encodePrimitive Halt = word8 (opcode Halt) 
 encodePrimitive RecStart = word8 (opcode RecStart)
 encodePrimitive RecStop = word8 (opcode RecStop)
+
+absoluteTime :: Time -> Term Primitive -> Term (Time, Primitive)
+absoluteTime initial (Seq tms) = undefined
+absoluteTime initial (Par tms) = undefined
+absoluteTime initial (P prim) = undefined
 
 uniEx = setTime 0 <> 
       (fireOne 12 <> waitFor 100 <> fireOne 12 <> waitFor 122) 

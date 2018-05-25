@@ -6,8 +6,11 @@ module Myelin.Graphviz(run) where
 import Control.Monad    
 import Control.Monad.Trans.State
 
+
 import Data.GraphViz.Types.Generalised
 import Data.GraphViz.Types.Monadic
+import Data.GraphViz.Attributes.Colors.Brewer
+import Data.GraphViz.Attributes.Complete
 import Data.GraphViz.Printing
 import Data.Text
 import Data.Text.Lazy (toStrict)

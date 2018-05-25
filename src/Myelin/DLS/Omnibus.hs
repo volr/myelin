@@ -53,6 +53,8 @@ data OmnibusHierachy =
 
 a |> b = b a
 
+
+
 data Address =
       Shift Word32 Int
     | Or Address Address

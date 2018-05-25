@@ -1,16 +1,44 @@
-{-# Language TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module Myelin.Music where
 
 import qualified Data.Map as Map
 import Data.Monoid
+
+import Data.Aeson
 
 -- import qualified Language.C.Inline as C
 -- import           Language.C.Inline.Context
 import Foreign.Ptr (Ptr)
 import Data.ByteString
 
+import GHC.Generics
 
 import Myelin.Music.Internal
+
+data MusicNode =
+    EventInProxy {
+        _port_name :: String    
+    }
+    | EventOutProxy {
+        _port_name :: String
+    }
+    | ContinuousOutProxy {
+        _port_name :: String,
+        _record_from :: [String],
+        _interval :: Float
+    }
+    | ContinuousInProxy {
+        _port_name :: String
+    }
+    | MessageInProxy {
+        _port_name :: String
+    }
+    | MessageOutProxy {
+        _port_name :: String
+    } deriving (Show, Generic, FromJSON, ToJSON)
 
 -- C.context context
 -- C.include "<music-c.h>"
@@ -61,8 +89,6 @@ publishMessageInputPort = undefined
 
 -- void MUSIC_EventOutputPort_mapGlobalIndex (MUSIC_EventOutputPort *Port, MUSIC_IndexMap *indices, int maxBuffered);
 -- void MUSIC_EventOutputPort_mapLocalIndex (MUSIC_EventOutputPort *Port, MUSIC_IndexMap *indices, int maxBuffered);
-
-
 
 -- Runtime functions
 

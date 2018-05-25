@@ -6,6 +6,7 @@ import Control.Lens
 import Data.Word
 import Myelin.DLS.PPU.Assembler.Monad as M
 import Myelin.DLS.PPU.Assembler as A
+
 {- 
 type IRLabel = Int
 
@@ -25,47 +26,60 @@ fxvbm = VectorType Byte Modulo
 
 data I a = I IR
 
+-}
+data Value = L Int deriving (Show)
+
 data IR where
-    Nop :: Type -> IR -> IR
-    Identity :: Type -> IR -> IR
-    Add :: Type -> IR -> IR -> IR
-    Sub :: Type -> IR -> IR -> IR
-    Mul :: Type -> IR -> IR -> IR
-    Div :: Type -> IR -> IR -> IR
-    Mod :: Type -> IR -> IR -> IR 
-    Neg :: Type -> IR -> IR
-    BitAnd :: Type -> IR -> IR -> IR
-    BitOr :: Type -> IR -> IR -> IR
-    BitXor :: Type -> IR -> IR -> IR
-    Shl :: Type -> IR -> IR -> IR
-    SShr :: Type -> IR -> IR -> IR
-    ZShr :: Type -> IR -> IR -> IR
-    RotR :: Type -> IR -> IR -> IR
-    RotL :: Type -> IR -> IR -> IR
-    Equal :: Type -> IR -> IR -> IR
-    NotEqual :: Type -> IR -> IR -> IR
-    LessThan :: Type -> IR -> IR -> IR
-    GreaterThan :: Type -> IR -> IR -> IR
-    LessEqual :: Type -> IR -> IR -> IR
-    GreaterEqual :: Type -> IR -> IR -> IR
-    Abs :: Type -> IR -> IR
-    Signum :: Type -> IR -> IR
-    Select :: Type -> IR -> IR -> IR -> IR
-    Load :: Type -> IR -> IR
-    Store :: Type -> IR -> IR
-    CCall :: Type -> IR -> IR -- ^ call a c function
-    Upsilon :: Type -> IR -> IR
-    Phi :: Type -> IR
-    Branch :: Type -> IR
-    Jump :: Type -> IR -> IR
-    Return :: Type -> IR -> IR
+    Nop :: IR -> IR
+    Identity :: IR -> IR
+    Add :: IR -> IR -> IR
+    Sub :: IR -> IR -> IR
+    Mul :: IR -> IR -> IR
+    Div :: IR -> IR -> IR
+    Mod :: IR -> IR -> IR 
+    Neg :: IR -> IR
+    BitAnd :: IR -> IR -> IR
+    BitOr :: IR -> IR -> IR
+    BitXor :: IR -> IR -> IR
+    Shl :: IR -> IR -> IR
+    SShr :: IR -> IR -> IR
+    ZShr :: IR -> IR -> IR
+    RotR :: IR -> IR -> IR
+    RotL :: IR -> IR -> IR
+    Equal :: IR -> IR -> IR
+    NotEqual :: IR -> IR -> IR
+    LessThan :: IR -> IR -> IR
+    GreaterThan :: IR -> IR -> IR
+    LessEqual :: IR -> IR -> IR
+    GreaterEqual :: IR -> IR -> IR
+    Abs :: IR -> IR
+    Signum :: IR -> IR
+    Select :: IR -> IR -> IR -> IR
+    Load :: IR -> IR
+    Store :: IR -> IR
+    CCall :: IR -> IR -- ^ call a c function
+    Upsilon :: IR -> IR
+    Phi :: IR
+    Branch :: IR
+    Jump :: IR -> IR
+    Return :: IR -> IR
     -- 
-    Splat :: Type -> IR -> IR
+    Splat :: IR -> IR
     -- 
     Value :: Value -> IR
     deriving (Show)
 
-instance Num (I FXVHFS) where
+{-
+genScalarBinOp :: Monad m => (A.Register -> A.Register -> M.Asm A.Register m)
+    -> IR 
+    -> IR 
+    -> M.Asm A.Register m
+genScalarBinOp op a b = do
+    a' <- genAsm a
+    b' <- genAsm b
+    op a' b'
+
+Num (I FXVHFS) where
     (+) = Add fxvhfs
     (*) = Mul fxvhfs
     (-) = Sub fxvhfs
