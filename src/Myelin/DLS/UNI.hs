@@ -41,12 +41,13 @@ sequential = Seq
 infixl 7 <|>
 (<|>) = pmappend
 
+-- | An uni primitive is one of the following commands
 data Primitive = 
-    WaitFor7 !Word8 -- ^
-  | WaitFor16 !Word16 -- ^
-  | WaitFor32 !Word32 -- ^
-  | WaitUntil !Word64 -- ^
-  | SetTime !Word64 -- ^ 
+    WaitFor7 !Word8 -- ^ relative wait instruction time between 0..127
+  | WaitFor16 !Word16 -- ^ relative wait instruction time between 0..2**16-1
+  | WaitFor32 !Word32 -- ^ relative wait instruction time between 0..2**32-1
+  | WaitUntil !Word64 -- ^ absolute wait instrcution
+  | SetTime !Word64 -- ^ set time reference point to a new value
   | Fire !Word32 !Word8 -- ^ send several spike events to the chip
   | FireOne !Word8 -- ^ send one spike event to the chip
   | Write !OmnibusAddress !OmnibusValue -- ^ write to the specified omnibus address
@@ -56,40 +57,55 @@ data Primitive =
   | RecStop -- ^ stop recortding chip answers (spikes and read responses)
   deriving (Eq, Show)
 
+-- | wait for the specified amount of time
 waitFor :: Time -> Term Primitive
 waitFor t | t < 2^7 = P (WaitFor7 (fromIntegral t))
 waitFor t | t < 2^16 = P (WaitFor16 (fromIntegral t))
 waitFor t | t < 2^32 = P (WaitFor32 (fromIntegral t))
 waitFor t = error "Time in cycles out of bound, use waitUntil"
 
+-- | wait until an absolute point in time
 waitUntil :: Time -> Term Primitive
 waitUntil = P . WaitUntil
 
+-- | set the absolute time to a new value
 setTime :: Time -> Term Primitive
 setTime = P . SetTime
 
-fire :: Word32 -> Word8 -> Term Primitive
+-- | send a spike event packet to the chip
+fire :: Word32 -- ^ which synapse rows to the the spike event to
+     -> Word8 -- ^ event address to be send
+     -> Term Primitive
 fire mask address = P (Fire mask address) 
 
+-- | send a spike event
 fireOne :: Word8 -> Term Primitive
 fireOne address = P (FireOne address)
 
-write :: OmnibusAddress -> OmnibusValue -> Term Primitive
+-- | write a value to an omnibus address
+write :: OmnibusAddress -- ^ omnibus address to write to
+      -> OmnibusValue -- ^ 32bit word to write
+      -> Term Primitive
 write address value = P (Write address value)
 
-read :: OmnibusAddress -> Term Primitive
+-- | read from specified omnibus address
+read :: OmnibusAddress -- ^ omnibus address to read from
+     -> Term Primitive
 read address = P (Read address)
 
+-- | stop the uni sequencer
 halt :: Term Primitive
 halt = P Halt
 
+-- | begin recording spike events coming from the chip
 recStart :: Term Primitive
 recStart = P RecStart
 
+-- | stop recording spike events coming from the chip
 recStop :: Term Primitive
 recStop = P RecStop
 
--- ^ binary encoding of UNI
+-- | binary encoding of UNI
 opcode :: Primitive -> Word8
 opcode (SetTime _) = 0x0
 opcode Halt = 0x0e
@@ -110,7 +126,7 @@ timeDelta (WaitFor16 t) = fromIntegral t
 timeDelta (WaitFor7 t) = fromIntegral t
 timeDelta _ = 0
 
--- ^ use a bytestring builder to encode
+-- | encode primitives into a bytestring builder
 encodePrimitive :: Primitive -> Builder
 encodePrimitive op@(SetTime t) = word8 (opcode op) <> word64LE t
 encodePrimitive op@(WaitFor7 t) = word8 (opcode op .|. t) 
