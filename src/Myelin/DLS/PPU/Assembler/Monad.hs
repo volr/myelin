@@ -16,16 +16,17 @@ data Label = Label {
     _id :: Int
 } deriving (Eq, Show)
 
+-- | State of the Assembler Monad
 data AsmState = AsmState {
-    _labels :: [Label],
-    _instructions :: [A.Inst],
+    _labels :: [Label], -- ^ labels generated so far (currently not used)
+    _instructions :: [A.Inst], -- ^ instructions assembled so far
     _freeRegisters :: Set Register, -- ^ registers not in use
     _temporaryRegisters :: Set Register, -- ^ registers that were temporarily allocated
     _usedRegisters :: Set Register, -- ^ registers in use
     _freeVectorRegisters :: Set VectorRegister, -- ^ vector registers not in use
     _temporaryVectorRegisters :: Set VectorRegister, -- ^ vector registers that were temporarily allocated
     _usedVectorRegisters :: Set VectorRegister, -- ^ vector registers in use
-    _registerLabels :: [(Label, Register)]
+    _registerLabels :: [(Label, Register)] -- ^ labels for registers (currently not used)
 } deriving (Eq, Show)
 
 initialAsmState = AsmState [] [] [A.R0 .. A.R31] [] [] [A.VR0 .. A.VR31] [] [] []
@@ -34,9 +35,11 @@ type Asm a m = StateT AsmState m a
 
 makeLenses ''AsmState
 
+-- | append a list of instructions
 asm :: Monad m => [Inst] -> Asm () m
 asm inst = instructions <>= inst
 
+-- Register Management functions
 allocateRegister :: Monad m => Asm Register m
 allocateRegister = do
     fr <- use freeRegisters
@@ -117,6 +120,7 @@ retainVectorRegisters retainedVectorRegisters =
     releaseVectorRegisters releasedVectorRegisters
     where releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
 
+-- ^ A new block of assembler instructions
 block :: Monad m => Set Register -> Set VectorRegister -> ([Register] -> [VectorRegister] -> Asm a m) -> Asm a m
 block retainedRegisters retainedVectorRegisters action = do
     releaseVectorRegisters releasedVectorRegisters
@@ -128,7 +132,11 @@ block retainedRegisters retainedVectorRegisters action = do
         releasedRegisters = Set.difference [A.R0 .. A.R31] retainedRegisters
         releasedVectorRegisters = Set.difference [A.VR0 .. A.VR31] retainedVectorRegisters
 
--- ^ create a stack frame of n words according to the powerpc-eabi convention
+------------------------------------------------------------------------------
+-- Function Prologue and Epilogue generation
+------------------------------------------------------------------------------
+
+-- | create a stack frame of n words according to the powerpc-eabi convention
 createStackFrame :: Monad m =>
     Word32 -- ^ size of stack frame (in words) to be created
     -> Asm () m
@@ -139,7 +147,7 @@ createStackFrame n = asm
         A.stw A.R0 A.R1 (n+4) -- stw r0, N+4(r1)
     ]
 
--- ^ remove a stack frame of n words according to the powerpc-eabi convention
+-- | remove a stack frame of n words according to the powerpc-eabi convention
 removeStackFrame :: Monad m =>
     Word32 -- ^ size of stack frame (in words) to be removed
     -> Asm () m
@@ -173,6 +181,10 @@ functionEpilogue :: Monad m => Asm () m
 functionEpilogue = do
     restoreRegisters [A.R14 .. A.R31]
     removeStackFrame 64
+
+------------------------------------------------------------------------------
+-- Functions for generating instructions of a specific form
+------------------------------------------------------------------------------
 
 iop :: Monad m => (Word32 -> Bool -> Bool -> A.Inst)
     -> Word32
