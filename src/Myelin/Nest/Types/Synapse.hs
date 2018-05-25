@@ -30,6 +30,7 @@ poisson	lambda
 
 -}
 
+-- | Representation of the synapse types available in Nest
 data Synapse =
     BernoulliSynapse {
         _delay :: Float,
