@@ -27,11 +27,10 @@ def create_node_test():
 
 def create_edge_test():
     nodes = {}
-    edges = {}
     
     nodes[1] = ne.create_node(neuron_params(1))
     nodes[2] = ne.create_node(neuron_params(2))
-    edges = ne.create_edge(nodes, edge_params(nodes[1], nodes[2]))
+    ne.create_edge(nodes, edge_params(nodes[1], nodes[2]))
 
 def execute_test():
     test_case = addict.Dict({
