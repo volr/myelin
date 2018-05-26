@@ -28,4 +28,4 @@ data Status = Status {
     _time :: Float,
     _time_collocate :: Float,
     _time_communicate :: Float
-}
+} deriving (Read, Show, Eq, Ord)

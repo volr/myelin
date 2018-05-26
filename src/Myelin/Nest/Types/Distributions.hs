@@ -29,4 +29,4 @@ data Distribution =
     }
     | Poisson {
         _lambda :: Float
-    }
+    } deriving (Read, Show, Eq, Ord)

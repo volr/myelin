@@ -7,3 +7,4 @@ data Connection =
     | OneToOne
     | FixedOutdegree
     | PairwiseBernoulli
+    deriving (Read, Show, Eq, Ord)

@@ -9,26 +9,13 @@ python python/nest/generate.py > Types.hs
 -}
 
 import Control.Lens
+import Data.Aeson.TH
+
 import Numeric.LinearAlgebra
 
 type Ndarray = [Float]
 type Tuple = [Float]
 type Str = String
-
-{-
-
-Supported distributions
-
-normal	mu, sigma
-lognormal	mu, sigma
-uniform	low, high
-uniform_int	low, high
-binomial	n, p
-exponential	lambda
-gamma	order, scale
-poisson	lambda
-
--}
 
 -- | Representation of the synapse types available in Nest
 data Synapse =
@@ -773,8 +760,9 @@ data Synapse =
         _tau :: Float,
         _weight :: Float,
         _wmax :: Float
-    }
+    } deriving (Show, Read, Eq, Ord)
 
+deriveJSON defaultOptions ''Synapse
 makeLenses ''Synapse
 makePrisms ''Synapse
 
