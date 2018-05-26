@@ -90,7 +90,7 @@ stdpUpdate :: Monad m =>
 stdpUpdate select SynramBaseAddresses{..} StdpParameters{..} zeros = do
     row <- M.allocateRegister
     forM_ ([0..31] :: [Word32]) $ \index -> do
-        M.xor_ row row False -- zero row register
+        M.xor_ row row -- zero row register
         M.addi row index -- load immediate
         stdpRow select ca_base ac_base weight_base ca_offset ac_offset factors decay_factors zeros row
         retainVectorRegisters [select, factors, decay_factors, zeros]
