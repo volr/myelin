@@ -5,6 +5,8 @@ import Control.Lens
 import Data.Aeson.TH
 
 -- | Representation of the Nest Kernel status
+--
+-- TODO: document all the fields
 data Status = Status {
     _t_max :: Float,
     _t_min :: Float,
