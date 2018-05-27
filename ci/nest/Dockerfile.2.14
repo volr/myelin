@@ -1,0 +1,52 @@
+##
+## Dockerfile for NEST v. 2.14.0
+## Documentation: http://www.nest-simulator.org/installation/
+##
+
+FROM ubuntu:18.04
+
+# Set install to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies and clean up
+RUN apt-get update && apt-get install -y \
+     build-essential \
+     cmake \
+     cython \
+     autoconf \
+     wget \
+     libtool \
+     libarchive-dev \
+     libgsl-dev \
+     libopenmpi-dev \
+     python-pip \
+     python-tk && \
+     rm -rf /var/lib/apt/lists/*
+
+RUN pip install mpi4py pynn numpy scipy matplotlib
+
+RUN wget https://github.com/nest/nest-simulator/archive/v2.14.0.tar.gz
+RUN tar xf v2.14.0.tar.gz
+RUN mkdir nest-simulator-v2.14.0-build
+RUN cd nest-simulator-v2.14.0-build
+WORKDIR nest-simulator-v2.14.0-build
+RUN cmake -DCMAKE_INSTALL_PREFIX:PATH=../nest-2.14.0/ ../nest-simulator-2.14.0 # -Dwith-music=../music-${2//v}/ -Dwith-mpi=ON
+RUN make -j8
+RUN make install
+# This test fails because it can't properly spawn daemons
+#RUN make installcheck # check integrity of nest install
+
+# remove intermediate files
+RUN rm /v2.14.0.tar.gz
+RUN rm -rf /nest-simulator-v2.14.0-build
+RUN rm -rf /nest-simulator-2.14.0
+
+ENV PATH="${PATH}:/nest-2.14.0/bin/"
+ENV PYTHONPATH="${PYTHONPATH}:/nest-2.14.0/lib/python2.7/site-packages/"
+WORKDIR /root
+
+COPY python .
+
+ENTRYPOINT ["python", "executor_3.6.py", "nest"]
+
+CMD ["--help"]
