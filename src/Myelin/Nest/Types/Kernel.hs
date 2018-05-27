@@ -1,5 +1,6 @@
 module Myelin.Nest.Types.Kernel where
 
+-- | Representation of the Nest Kernel status
 data Status = Status {
     _t_max :: Float,
     _t_min :: Float,
@@ -27,4 +28,4 @@ data Status = Status {
     _time :: Float,
     _time_collocate :: Float,
     _time_communicate :: Float
-}
+} deriving (Read, Show, Eq, Ord)

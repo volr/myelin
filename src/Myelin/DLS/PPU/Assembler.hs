@@ -44,7 +44,7 @@ data Register =
     | R29
     | R30
     | R31
-    deriving (Eq, Show, Enum, Ord)
+    deriving (Eq, Show, Enum, Read, Ord)
 
 encodeRegister :: Register -> Word32
 encodeRegister = fromIntegral . fromEnum
@@ -82,12 +82,12 @@ data VectorRegister =
     | VR29
     | VR30
     | VR31
-    deriving (Eq, Show, Enum, Ord)
+    deriving (Eq, Show, Enum, Read, Ord)
 
 encodeVectorRegister :: VectorRegister -> Word32
 encodeVectorRegister = fromIntegral . fromEnum
 
-data SpecialPurposeRegister = SpecialPurposeRegister Word32 deriving (Eq, Show)
+data SpecialPurposeRegister = SpecialPurposeRegister Word32 deriving (Eq, Show, Read, Ord)
 encodeSpecialPurposeRegister (SpecialPurposeRegister r) = r
 
 data Opcd =
@@ -134,7 +134,7 @@ data Opcd =
     | Op_sthu
     | Op_lmw
     | Op_stmw
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 opcode Op_null        = 0
 opcode Op_twi         = 3
@@ -318,7 +318,7 @@ data X_opcd =
     | Xop_srawi
     | Xop_extsh
     | Xop_extsb
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 x_opcd :: X_opcd -> Word32
 x_opcd Xop_cmp     =   0
@@ -430,59 +430,112 @@ x_asm Xop_extsh   = "extsh"
 x_asm Xop_extsb   = "extsb"
 
 -- c.f. p. 193-197
-cmp     rt ra rb = X Op_alu_xo rt ra rb Xop_cmp
-tw      rt ra rb = X Op_alu_xo rt ra rb Xop_tw
-lwzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lwzx
-slw     rt ra rb = X Op_alu_xo rt ra rb Xop_slw
-cntlzw  rt ra rb = X Op_alu_xo rt ra rb Xop_cntlzw
-and     rt ra rb = X Op_alu_xo rt ra rb Xop_and
-cmpl    rt ra rb = X Op_alu_xo rt ra rb Xop_cmpl
-nvem    rt ra rb = X Op_alu_xo rt ra rb Xop_nvem
-nves    rt ra rb = X Op_alu_xo rt ra rb Xop_nves
-nvemtl  rt ra rb = X Op_alu_xo rt ra rb Xop_nvemtl
-lwzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lwzux
-andc    rt ra rb = X Op_alu_xo rt ra rb Xop_andc
-wait    rt ra rb = X Op_alu_xo rt ra rb Xop_wait
-mfmsr   rt ra rb = X Op_alu_xo rt ra rb Xop_mfmsr
-lbzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lbzx
-lbzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lbzux
-popcb   rt ra rb = X Op_alu_xo rt ra rb Xop_popcb
-nor     rt ra rb = X Op_alu_xo rt ra rb Xop_nor
-mtmsr   rt ra rb = X Op_alu_xo rt ra rb Xop_mtmsr
-stwx    rt ra rb = X Op_alu_xo rt ra rb Xop_stwx
-prtyw   rt ra rb = X Op_alu_xo rt ra rb Xop_prtyw
-stwux   rt ra rb = X Op_alu_xo rt ra rb Xop_stwux
-stbx    rt ra rb = X Op_alu_xo rt ra rb Xop_stbx
-stbux   rt ra rb = X Op_alu_xo rt ra rb Xop_stbux
-lhzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lhzx
-eqv     rt ra rb = X Op_alu_xo rt ra rb Xop_eqv
-eciwx   rt ra rb = X Op_alu_xo rt ra rb Xop_eciwx
-lhzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lhzux
-xor     rt ra rb = X Op_alu_xo rt ra rb Xop_xor
-lhax    rt ra rb = X Op_alu_xo rt ra rb Xop_lhax
-lhaux   rt ra rb = X Op_alu_xo rt ra rb Xop_lhaux
-sthx    rt ra rb = X Op_alu_xo rt ra rb Xop_sthx
-orc     rt ra rb = X Op_alu_xo rt ra rb Xop_orc
-ecowx   rt ra rb = X Op_alu_xo rt ra rb Xop_ecowx
-sthux   rt ra rb = X Op_alu_xo rt ra rb Xop_sthux
-or      rt ra rb = X Op_alu_xo rt ra rb Xop_or
-nand    rt ra rb = X Op_alu_xo rt ra rb Xop_nand
-srw     rt ra rb = X Op_alu_xo rt ra rb Xop_srw
-sync    rt ra rb = X Op_alu_xo rt ra rb Xop_sync
-synm    rt ra rb = X Op_alu_xo rt ra rb Xop_synm
-syns    rt ra rb = X Op_alu_xo rt ra rb Xop_syns
-synmtl  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtl
-synmtvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmtvr
-synmfvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmfvr
-synmtp  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtp
-synmfp  rt ra rb = X Op_alu_xo rt ra rb Xop_synmfp
-synmvvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmvvr
-synops  rt ra rb = X Op_alu_xo rt ra rb Xop_synops
-synswp  rt ra rb = X Op_alu_xo rt ra rb Xop_synswp
-sraw    rt ra rb = X Op_alu_xo rt ra rb Xop_sraw
-srawi   rt ra rb = X Op_alu_xo rt ra rb Xop_srawi
-extsh   rt ra rb = X Op_alu_xo rt ra rb Xop_extsh
-extsb   rt ra rb = X Op_alu_xo rt ra rb Xop_extsb
+cmp     rt ra rb = X Op_alu_xo rt ra rb Xop_cmp False
+cmp'     rt ra rb = X Op_alu_xo rt ra rb Xop_cmp True
+tw      rt ra rb = X Op_alu_xo rt ra rb Xop_tw False
+tw'      rt ra rb = X Op_alu_xo rt ra rb Xop_tw True
+lwzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lwzx False
+lwzx'    rt ra rb = X Op_alu_xo rt ra rb Xop_lwzx True
+slw     rt ra rb = X Op_alu_xo rt ra rb Xop_slw False
+slw'     rt ra rb = X Op_alu_xo rt ra rb Xop_slw True
+cntlzw  rt ra rb = X Op_alu_xo rt ra rb Xop_cntlzw False
+cntlzw'  rt ra rb = X Op_alu_xo rt ra rb Xop_cntlzw True
+and     rt ra rb = X Op_alu_xo rt ra rb Xop_and False
+and'     rt ra rb = X Op_alu_xo rt ra rb Xop_and True
+cmpl    rt ra rb = X Op_alu_xo rt ra rb Xop_cmpl False
+cmpl'    rt ra rb = X Op_alu_xo rt ra rb Xop_cmpl True
+nvem    rt ra rb = X Op_alu_xo rt ra rb Xop_nvem False
+nvem'    rt ra rb = X Op_alu_xo rt ra rb Xop_nvem True
+nves    rt ra rb = X Op_alu_xo rt ra rb Xop_nves False
+nves'    rt ra rb = X Op_alu_xo rt ra rb Xop_nves True
+nvemtl  rt ra rb = X Op_alu_xo rt ra rb Xop_nvemtl False
+nvemtl'  rt ra rb = X Op_alu_xo rt ra rb Xop_nvemtl True
+lwzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lwzux False
+lwzux'   rt ra rb = X Op_alu_xo rt ra rb Xop_lwzux True
+andc    rt ra rb = X Op_alu_xo rt ra rb Xop_andc False
+andc'    rt ra rb = X Op_alu_xo rt ra rb Xop_andc True
+wait    rt ra rb = X Op_alu_xo rt ra rb Xop_wait False
+wait'    rt ra rb = X Op_alu_xo rt ra rb Xop_wait True
+mfmsr   rt ra rb = X Op_alu_xo rt ra rb Xop_mfmsr False
+mfmsr'   rt ra rb = X Op_alu_xo rt ra rb Xop_mfmsr True
+lbzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lbzx False
+lbzx'    rt ra rb = X Op_alu_xo rt ra rb Xop_lbzx True
+lbzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lbzux False
+lbzux'   rt ra rb = X Op_alu_xo rt ra rb Xop_lbzux True
+popcb   rt ra rb = X Op_alu_xo rt ra rb Xop_popcb False
+popcb'   rt ra rb = X Op_alu_xo rt ra rb Xop_popcb True
+nor     rt ra rb = X Op_alu_xo rt ra rb Xop_nor False
+nor'     rt ra rb = X Op_alu_xo rt ra rb Xop_nor True
+mtmsr   rt ra rb = X Op_alu_xo rt ra rb Xop_mtmsr False
+mtmsr'   rt ra rb = X Op_alu_xo rt ra rb Xop_mtmsr True
+stwx    rt ra rb = X Op_alu_xo rt ra rb Xop_stwx False
+stwx'    rt ra rb = X Op_alu_xo rt ra rb Xop_stwx True
+prtyw   rt ra rb = X Op_alu_xo rt ra rb Xop_prtyw False
+prtyw'   rt ra rb = X Op_alu_xo rt ra rb Xop_prtyw True
+stwux   rt ra rb = X Op_alu_xo rt ra rb Xop_stwux False
+stwux'   rt ra rb = X Op_alu_xo rt ra rb Xop_stwux True
+stbx    rt ra rb = X Op_alu_xo rt ra rb Xop_stbx False
+stbx'    rt ra rb = X Op_alu_xo rt ra rb Xop_stbx True
+stbux   rt ra rb = X Op_alu_xo rt ra rb Xop_stbux False
+stbux'   rt ra rb = X Op_alu_xo rt ra rb Xop_stbux True
+lhzx    rt ra rb = X Op_alu_xo rt ra rb Xop_lhzx False
+lhzx'    rt ra rb = X Op_alu_xo rt ra rb Xop_lhzx True
+eqv     rt ra rb = X Op_alu_xo rt ra rb Xop_eqv False
+eqv'     rt ra rb = X Op_alu_xo rt ra rb Xop_eqv True
+eciwx   rt ra rb = X Op_alu_xo rt ra rb Xop_eciwx False
+eciwx'   rt ra rb = X Op_alu_xo rt ra rb Xop_eciwx True
+lhzux   rt ra rb = X Op_alu_xo rt ra rb Xop_lhzux False
+lhzux'   rt ra rb = X Op_alu_xo rt ra rb Xop_lhzux True
+xor     rt ra rb = X Op_alu_xo rt ra rb Xop_xor False
+xor'     rt ra rb = X Op_alu_xo rt ra rb Xop_xor True
+lhax    rt ra rb = X Op_alu_xo rt ra rb Xop_lhax False
+lhax'    rt ra rb = X Op_alu_xo rt ra rb Xop_lhax True
+lhaux   rt ra rb = X Op_alu_xo rt ra rb Xop_lhaux False
+lhaux'   rt ra rb = X Op_alu_xo rt ra rb Xop_lhaux True
+sthx    rt ra rb = X Op_alu_xo rt ra rb Xop_sthx False
+sthx'    rt ra rb = X Op_alu_xo rt ra rb Xop_sthx True
+orc     rt ra rb = X Op_alu_xo rt ra rb Xop_orc False
+orc'     rt ra rb = X Op_alu_xo rt ra rb Xop_orc True
+ecowx   rt ra rb = X Op_alu_xo rt ra rb Xop_ecowx False
+ecowx'   rt ra rb = X Op_alu_xo rt ra rb Xop_ecowx True
+sthux   rt ra rb = X Op_alu_xo rt ra rb Xop_sthux False
+sthux'   rt ra rb = X Op_alu_xo rt ra rb Xop_sthux True
+or      rt ra rb = X Op_alu_xo rt ra rb Xop_or False
+or'      rt ra rb = X Op_alu_xo rt ra rb Xop_or True
+nand    rt ra rb = X Op_alu_xo rt ra rb Xop_nand False
+nand'    rt ra rb = X Op_alu_xo rt ra rb Xop_nand True
+srw     rt ra rb = X Op_alu_xo rt ra rb Xop_srw False
+srw'     rt ra rb = X Op_alu_xo rt ra rb Xop_srw True
+sync    rt ra rb = X Op_alu_xo rt ra rb Xop_sync False
+sync'    rt ra rb = X Op_alu_xo rt ra rb Xop_sync True
+synm    rt ra rb = X Op_alu_xo rt ra rb Xop_synm False
+synm'    rt ra rb = X Op_alu_xo rt ra rb Xop_synm True
+syns    rt ra rb = X Op_alu_xo rt ra rb Xop_syns False
+syns'    rt ra rb = X Op_alu_xo rt ra rb Xop_syns True
+synmtl  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtl False
+synmtl'  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtl True
+synmtvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmtvr False
+synmtvr' rt ra rb = X Op_alu_xo rt ra rb Xop_synmtvr True
+synmfvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmfvr False
+synmfvr' rt ra rb = X Op_alu_xo rt ra rb Xop_synmfvr True
+synmtp  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtp False
+synmtp'  rt ra rb = X Op_alu_xo rt ra rb Xop_synmtp True
+synmfp  rt ra rb = X Op_alu_xo rt ra rb Xop_synmfp False
+synmfp'  rt ra rb = X Op_alu_xo rt ra rb Xop_synmfp True
+synmvvr rt ra rb = X Op_alu_xo rt ra rb Xop_synmvvr False
+synmvvr' rt ra rb = X Op_alu_xo rt ra rb Xop_synmvvr True
+synops  rt ra rb = X Op_alu_xo rt ra rb Xop_synops False
+synops'  rt ra rb = X Op_alu_xo rt ra rb Xop_synops True
+synswp  rt ra rb = X Op_alu_xo rt ra rb Xop_synswp False
+synswp'  rt ra rb = X Op_alu_xo rt ra rb Xop_synswp True
+sraw    rt ra rb = X Op_alu_xo rt ra rb Xop_sraw False
+sraw'    rt ra rb = X Op_alu_xo rt ra rb Xop_sraw True
+srawi   rt ra rb = X Op_alu_xo rt ra rb Xop_srawi False
+srawi'   rt ra rb = X Op_alu_xo rt ra rb Xop_srawi True
+extsh   rt ra rb = X Op_alu_xo rt ra rb Xop_extsh False
+extsh'   rt ra rb = X Op_alu_xo rt ra rb Xop_extsh True
+extsb   rt ra rb = X Op_alu_xo rt ra rb Xop_extsb False
+extsb'   rt ra rb = X Op_alu_xo rt ra rb Xop_extsb True
 
 data Xo_opcd =
     Xop_subfc
@@ -501,7 +554,7 @@ data Xo_opcd =
     | Xop_add
     | Xop_divwu
     | Xop_divw
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 xo_opcd :: Xo_opcd -> Word32
 xo_opcd Xop_subfc  =   8
@@ -620,7 +673,7 @@ data Xl_opcd =
     | Xxop_crorc
     | Xxop_cror
     | Xxop_bcctr
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 xl_opcd Xxop_mcrf   =   0
 xl_opcd Xxop_bclr   =  16
@@ -672,7 +725,7 @@ data Xfx_opcd =
     | Xop_mtocrf
     | Xop_mfspr
     | Xop_mtspr
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 xfx_opcd Xop_mfocrf = 19
 xfx_opcd Xop_mtocrf = 144
@@ -689,10 +742,10 @@ mtocrf rt spr = XFX Op_alu_xo rt spr Xop_mtocrf
 mfspr  rt spr = XFX Op_alu_xo rt spr Xop_mfspr
 mtspr  rt spr = XFX Op_alu_xo rt spr Xop_mtspr
 
--- ^ move from link register
+-- | move from link register
 mflr r = mfspr r (SpecialPurposeRegister 8)
 
--- ^ move to link register
+-- | move to link register
 mtlr r = mtspr r (SpecialPurposeRegister 8)
 
 data Fxv_opcd =
@@ -749,7 +802,7 @@ data Fxv_opcd =
     | Xop_fxvaddbfs     -- ^ fixed-vector-add-byte-fractional-saturating
     | Xop_fxvlax        -- ^ fixed-vector-load-array-indexed
     | Xop_fxvstax       -- ^ fixed-vector-store-array-indexed
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 fxv_opcd Xop_fxvmahm       =  12
 fxv_opcd Xop_fxvmabm       =  13
@@ -864,7 +917,7 @@ data Fxv_cond =
     | Fxv_cond_gt
     | Fxv_cond_lt
     | Fxv_cond_eq
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Ord)
 
 fxv_cond cond = case cond of
     Fxv_cond_null -> 0
@@ -966,7 +1019,7 @@ fxvaddbfs'     rt ra rb cond = FXV Op_nve_xo rt ra rb Xop_fxvaddbfs     cond
 fxvlax        rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvlax
 fxvstax       rt ra rb      = FXVS Op_nve_xo rt ra rb Xop_fxvstax
 
--- Instruction formats supported by the PPU
+-- | Instruction formats supported by the PPU
 data Inst =
     -- page 8
     I {
@@ -1054,8 +1107,9 @@ data Inst =
         _ra :: Register,
         _rb :: Register,
         _fxv :: Fxv_opcd
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Read, Ord)
 
+-- | binary encoding of the different instruction types
 encode :: Inst -> Word32
 encode inst = case inst of
     I {..} -> (opcode _opcd)
