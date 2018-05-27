@@ -6,7 +6,6 @@ import Data.Aeson.TH
 import Numeric.LinearAlgebra
 
 type ScalarWeight = Float
-type Weight = Matrix Float
 type Probability = Float
 
 {--|
@@ -30,28 +29,28 @@ are backend specific connectors.
 --}
 data ProjectionType =
     AllToAll {
-        _weight :: Weight
+        _weight :: Matrix Float
     }
     | OneToOne {
-        _weight :: Weight
+        _weight :: Matrix Float
     }
     | FixedNumberPost {
         _n :: Int,
-        _weight :: Weight
+        _weight ::  Matrix Float
     }
     | FixedNumberPre {
         _n :: Int,
-        _weight :: Weight
+        _weight ::  Matrix Float
     }
     | FromList {
-        _weights :: [(Int, Int, ScalarWeight)]
+        _weights :: [(Int, Int, Float)]
     }
     | FixedProbability {
         _probability :: Probability
     }
     deriving (Eq, Show)
 
-deriveJSON defaultOptions ''ProjectionType
+--deriveJSON defaultOptions ''ProjectionType
 makeLenses ''ProjectionType
 makePrisms ''ProjectionType
 

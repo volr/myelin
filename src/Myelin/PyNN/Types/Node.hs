@@ -263,7 +263,7 @@ spike_source_poisson = SpikeSourcePoisson {
 }
 
 spike_source_array = SpikeSourceArray {
-    _spike_times = [],
+    _spike_times = []
 }
 
 deriveJSON defaultOptions ''Node

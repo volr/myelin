@@ -17,6 +17,8 @@ import Control.Monad.Trans.Identity
 
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
+import Data.Aeson.TH
+
 import Data.ByteString.Lazy.Char8 as B
 import Data.GraphViz.Types.Generalised
 import Data.GraphViz.Types.Monadic
@@ -44,9 +46,7 @@ type Seconds = Unit Metric DTime Float
 type Ampere = Unit Metric DElectricCurrent Float
 
 
-{--| 
-
-NeuronType corresponds to the different point neuron
+{--| NeuronType corresponds to the different point neuron
 types that are constructible in pynn. Many of them
 are back end specific.
 
@@ -193,6 +193,7 @@ data NeuronType =
         _tau_syn_I :: Vector Float,
         _v_offset :: Vector Float
     } deriving (Eq, Show)
+
 
 makeLenses ''NeuronType
 makePrisms ''NeuronType
@@ -614,25 +615,7 @@ type Weight = Float -- TODO: This is platform specific
 type Delay = Float -- TODO: This is platform specific 
 type Probability = Float -- TODO: Very unsophisticated representation
 
-{--
 
-ProjectionType corresponds to the different connectors available
-in pynn. Some of the connectors are backend specific.
-
-AllToAll,
-FixedProbability,
-DistanceDependentProbability,
-FixedNumberPre,
-FixedNumberPost,
-OneToOne,
-SmallWorld,
-FromList,
-FromFile
-
-Not all have them been defined below. In addition there
-are backend specific connectors. 
-
---}
 data ProjectionType =
     AllToAll {
         _weight :: Weight,
@@ -884,14 +867,13 @@ spikeSourcePoisson rate start = do
     return spikeSource
 
 population :: Monad m => 
-    Integer -- ^ size of the population
+    String -- ^ label of the population (used for printing)
+    -> Integer -- ^ size of the population
     -> NeuronType -- ^ type of neuron
-    -> String -- ^ label of the population (used for printing)
-    -> Bool -- ^ whether the population should be recorded
     -> SNN Node m
-population i typ label recordSpikes = do
+population  label i typ = do
     l <- newId
-    let pop = Population i typ label l recordSpikes
+    let pop = Population i typ label l True
     nodes <>= [pop]
     return pop
 
