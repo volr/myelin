@@ -1,4 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Myelin.Nest.Types.Kernel where
+
+import Control.Lens
+import Data.Aeson.TH
 
 -- | Representation of the Nest Kernel status
 data Status = Status {
@@ -29,3 +33,7 @@ data Status = Status {
     _time_collocate :: Float,
     _time_communicate :: Float
 } deriving (Read, Show, Eq, Ord)
+
+deriveJSON defaultOptions ''Status
+makeLenses ''Status
+makePrisms ''Status

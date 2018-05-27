@@ -11,6 +11,9 @@ python python/nest/generate.py > Types.hs
 import Data.Aeson.TH
 import Control.Lens
 
+import qualified Myelin.Nest.Types.MultiCompartment as MultiCompartment
+import Myelin.Nest.Types.Recordable
+
 type Ndarray = [Float]
 type Tuple = [Float]
 type Str = String
@@ -650,10 +653,10 @@ data Node =
         _tau_minus :: Float,
         _tau_minus_triplet :: Float,
         _v_reset :: Float,
-        _v_th :: Float
---        _soma :: Dict,
---        _proximal :: Dict,
---        _distal :: Dict
+        _v_th :: Float,
+        _soma :: MultiCompartment.Parameters,
+        _proximal :: MultiCompartment.Parameters,
+        _distal :: MultiCompartment.Parameters
     }    
     | IafCondExp {
         _beta_ca :: Float,
@@ -1570,11 +1573,6 @@ data Node =
         _stop :: Float
     } deriving (Show, Read, Eq, Ord)
 
-deriveJSON defaultOptions ''Node
-makeLenses ''Node
-makePrisms ''Node
-
-
 aeif_cond_alpha = AeifCondAlpha {
     _a = 4.0,
     _b = 80.5,
@@ -2204,10 +2202,10 @@ iaf_cond_alpha_mc = IafCondAlphaMc {
     _tau_minus = 20.0,
     _tau_minus_triplet = 110.0,
     _v_reset = -60.0,
-    _v_th = -55.0
---    _soma = {'C_m': 150.0, 'E_ex': 0.0, 'E_in': -85.0, 'E_L': -70.0, 'g_L': 10.0, 'I_e': 0.0, 'tau_syn_ex': 0.5, 'tau_syn_in': 2.0, 'V_m': -70.0},
---    _proximal = {'C_m': 75.0, 'E_ex': 0.0, 'E_in': -85.0, 'E_L': -70.0, 'g_L': 5.0, 'I_e': 0.0, 'tau_syn_ex': 0.5, 'tau_syn_in': 2.0, 'V_m': -70.0},
---    _distal = {'C_m': 150.0, 'E_ex': 0.0, 'E_in': -85.0, 'E_L': -70.0, 'g_L': 10.0, 'I_e': 0.0, 'tau_syn_ex': 0.5, 'tau_syn_in': 2.0, 'V_m': -70.0}
+    _v_th = -55.0,
+    _soma = MultiCompartment.defaults,
+    _proximal = MultiCompartment.defaults & MultiCompartment.c_m .~ 75.0 & MultiCompartment.g_L .~ 5.0,
+    _distal = MultiCompartment.defaults
 }
 iaf_cond_exp = IafCondExp {
     _beta_ca = 0.001,
@@ -3125,3 +3123,7 @@ step_current_generator = StepCurrentGenerator {
     _start = 0.0,
     _stop = 1.7976931348623157e+308
 }
+
+deriveJSON defaultOptions ''Node
+makeLenses ''Node
+makePrisms ''Node
