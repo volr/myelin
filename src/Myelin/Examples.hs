@@ -16,11 +16,10 @@ import Myelin.SNN
 net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1 .. 100]
-    
 
-    a <- population 5 (if_current_exponential & cm .~ [0.1, 0.3, 0.4, 0.5, 0.6]) "a" True
-    b <- population 10 if_current_exponential "b" False
-    c <- population 5 if_current_exponential "c" False
+    a <- population "a" 5 $ if_current_exponential & cm .~ [0.1, 0.3, 0.4, 0.5, 0.6]
+    b <- population "b" 10 $ if_current_exponential 
+    c <- population "c" 5  $ if_current_exponential 
     
     projection (AllToAll 1.0 False) (Static Excitatory) input a
     projection (AllToAll 1.0 False) (Static Excitatory) a b
@@ -33,7 +32,7 @@ net = do
 net2 :: Monad m => SNN () m
 net2 = do
     spike_source <- spikeSourceArray [10 .. 51]
-    neurons <- population 3 izhikevich "neurons" False
+    neurons <- population "neurons" 3 izhikevich
     output <- fileOutput "out.txt"
     projection (OneToOne 3.0) (Static Excitatory) spike_source neurons
     return ()

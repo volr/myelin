@@ -1,4 +1,4 @@
-module Myelin.Nest.Types.Recordables where
+module Myelin.Nest.Types.Recordable where
 
 -- | Where to store the recording
 data RecordTarget =
