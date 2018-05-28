@@ -23,13 +23,13 @@ RUN apt-get update && apt-get install -y \
      python-tk && \
      rm -rf /var/lib/apt/lists/*
 
-RUN pip install mpi4py pynn numpy scipy matplotlib
+RUN pip install mpi4py pynn numpy scipy matplotlib addict future
 
 RUN wget https://github.com/nest/nest-simulator/archive/v2.14.0.tar.gz
 RUN tar xf v2.14.0.tar.gz
 RUN mkdir nest-simulator-v2.14.0-build
 RUN cd nest-simulator-v2.14.0-build
-WORKDIR nest-simulator-v2.14.0-build
+WORKDIR /nest-simulator-v2.14.0-build
 RUN cmake -DCMAKE_INSTALL_PREFIX:PATH=../nest-2.14.0/ ../nest-simulator-2.14.0 # -Dwith-music=../music-${2//v}/ -Dwith-mpi=ON
 RUN make -j8
 RUN make install
@@ -42,11 +42,14 @@ RUN rm -rf /nest-simulator-v2.14.0-build
 RUN rm -rf /nest-simulator-2.14.0
 
 ENV PATH="${PATH}:/nest-2.14.0/bin/"
-ENV PYTHONPATH="${PYTHONPATH}:/nest-2.14.0/lib/python2.7/site-packages/"
+ENV PYTHONPATH="/nest-2.14.0/lib/python2.7/site-packages/"
+
+# Prepare working environment
+RUN mkdir /data
 WORKDIR /root
+COPY python/ /myelin
+VOLUME ["/data"]
 
-COPY python .
-
-ENTRYPOINT ["python", "executor_3.6.py", "nest"]
+ENTRYPOINT ["python", "/myelin/executor.py", "nest"]
 
 CMD ["--help"]

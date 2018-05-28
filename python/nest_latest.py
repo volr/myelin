@@ -32,6 +32,7 @@ def create_node(node):
     Returns:
         Nest node created.
     """
+    print(node)
     return nest.Create(node.type, node.num_neurons, params=node.parameters)
 
 
@@ -54,10 +55,3 @@ def execute(conf):
         create_edge(nodes, edge)
 
     nest.Simulate(simtime)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='nest executor')
-    args = parser.parse_args()
-    conf = addict.Dict(json.load(sys.stdin))
-    execute(conf)
