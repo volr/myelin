@@ -41,7 +41,7 @@ type Label = String
 -- TODO(Christian): Move Units somewhere else
 type Siemens = Unit Metric DElectricConductance Float
 type Volt = Unit Metric DElectricPotential Float
-type Farrad = Unit Metric DCapacitance Float  
+type Farrad = Unit Metric DCapacitance Float
 type Seconds = Unit Metric DTime Float
 type Ampere = Unit Metric DElectricCurrent Float
 
@@ -80,13 +80,13 @@ SpikeSourcePoissonRefractory
 --}
 data NeuronType =
     IFCurrentAlpha {
-        _tau_m :: Vector Float, -- ^ membrane time constant  
+        _tau_m :: Vector Float, -- ^ membrane time constant
         _tau_refrac :: Vector Float, -- ^ refractory time
         _v_thresh :: Vector Float, -- ^ threshhold potential
         _tau_syn_E :: Vector Float, -- ^ excitatory synaptic time constant
         _v_rest :: Vector Float, -- ^ resting potential
         _cm :: Vector Float, -- ^ membrane capactitance
-        _v_reset :: Vector Float, -- ^ reset potential 
+        _v_reset :: Vector Float, -- ^ reset potential
         _tau_syn_I :: Vector Float, -- ^ inhibitory synaptic time constant
         _i_offset :: Vector Float -- ^ offset current
     }
@@ -120,9 +120,9 @@ data NeuronType =
         _v_thresh :: Vector Float, -- ^ threshhold voltage
         _v_rest :: Vector Float, -- ^ resting potential
         _v_reset :: Vector Float, -- ^ reset potential
-        _i_offset :: Vector Float -- ^ offset current 
+        _i_offset :: Vector Float -- ^ offset current
     }
-    | IFCondExp { 
+    | IFCondExp {
         _v_rest :: Vector Float, -- ^ resting potential
         _cm :: Vector Float, -- ^ membrane capacitance
         _tau_m :: Vector Float, -- ^ membrane time constant
@@ -133,7 +133,7 @@ data NeuronType =
         _e_rev_I :: Vector Float, -- ^ inhibitory reversal potential
         _v_thresh :: Vector Float, -- ^ spike initiation threshold
         _v_reset :: Vector Float, -- ^ reset value for membrane potential after a spike
-        _i_offset :: Vector Float -- ^ offset current 
+        _i_offset :: Vector Float -- ^ offset current
     }
     | Izhikevich {
         _a :: Vector Float,
@@ -148,7 +148,7 @@ data NeuronType =
         _tau_w :: Vector Float,
         _tau_syn_I :: Vector Float,
         _e_rev_E :: Vector Float,
-        _v_rest :: Vector Float, 
+        _v_rest :: Vector Float,
         _cm :: Vector Float,
         _tau_syn_E :: Vector Float,
         _tau_m :: Vector Float,
@@ -182,7 +182,7 @@ data NeuronType =
         _cm :: Vector Float, -- ^ capacity of the membrane
         _e_rev_E :: Vector Float, -- ^ excitatory reversal potential
         _e_rev_I :: Vector Float, -- ^ inhibitory reversal potential
-        _e_rev_K :: Vector Float, 
+        _e_rev_K :: Vector Float,
         _e_rev_Na :: Vector Float,
         _e_rev_leak :: Vector Float,
         _g_leak :: Vector Float,
@@ -200,7 +200,7 @@ makePrisms ''NeuronType
 
 -- ^  Defaults taken from http://neuralensemble.org/docs/PyNN/standardmodels.html
 if_cond_exp :: NeuronType
-if_cond_exp = IFCondExp { 
+if_cond_exp = IFCondExp {
     _v_rest = [-65.0],
     _cm = [1.0],
     _tau_m = [20.0],
@@ -281,36 +281,36 @@ eif_cond_exp = EIFCondExp {
     _tau_w = [144.0],
     _tau_syn_I = [5.0],
     _e_rev_E = [0.0],
-    _v_rest = [-70.6], 
-    _cm = [0.281], 
-    _tau_syn_E = [5.0], 
-    _tau_m = [9.3667], 
-    _a = [4.0], 
-    _delta_T = [2.0], 
-    _v_thresh = [-50.4], 
-    _b = [0.0805], 
-    _v_spike = [-40.0], 
-    _e_rev_I = [-80.0], 
+    _v_rest = [-70.6],
+    _cm = [0.281],
+    _tau_syn_E = [5.0],
+    _tau_m = [9.3667],
+    _a = [4.0],
+    _delta_T = [2.0],
+    _v_thresh = [-50.4],
+    _b = [0.0805],
+    _v_spike = [-40.0],
+    _e_rev_I = [-80.0],
     _tau_refrac = [0.1]
 }
 
 eif_cond_alpha :: NeuronType
 eif_cond_alpha = EIFCondAlpha {
-    _v_reset = [-70.6], 
-    _i_offset = [0.0], 
-    _tau_w = [144.0], 
-    _tau_syn_I = [5.0], 
-    _e_rev_E = [0.0], 
-    _v_rest = [-70.6], 
-    _cm = [0.281], 
-    _tau_syn_E = [5.0], 
-    _tau_m = [9.3667], 
-    _a = [4.0], 
-    _delta_T = [2.0], 
-    _v_thresh = [-50.4], 
-    _b = [0.0805], 
-    _v_spike = [-40.0], 
-    _e_rev_I = [-80.0], 
+    _v_reset = [-70.6],
+    _i_offset = [0.0],
+    _tau_w = [144.0],
+    _tau_syn_I = [5.0],
+    _e_rev_E = [0.0],
+    _v_rest = [-70.6],
+    _cm = [0.281],
+    _tau_syn_E = [5.0],
+    _tau_m = [9.3667],
+    _a = [4.0],
+    _delta_T = [2.0],
+    _v_thresh = [-50.4],
+    _b = [0.0805],
+    _v_spike = [-40.0],
+    _e_rev_I = [-80.0],
     _tau_refrac = [0.1]
 }
 
@@ -405,21 +405,21 @@ instance ToJSON NeuronType where
         ]
     toJSON EIFCondAlpha {..} = object [
             "type" .= ("EIFCondAlpha" :: String),
-            "cm" .= _cm, 
-            "tau_refrac" .= _tau_refrac, 
-            "v_spike" .= _v_spike, 
-            "v_reset" .= _v_reset, 
-            "v_rest" .= _v_rest, 
-            "tau_m" .= _tau_m, 
-            "i_offset" .= _i_offset, 
-            "a" .= _a, 
-            "b" .= _b, 
-            "delta_T" .= _delta_T, 
-            "tau_w" .= _tau_w, 
-            "v_thresh" .= _v_thresh, 
-            "e_rev_E" .= _e_rev_E, 
-            "tau_syn_E" .= _tau_syn_E, 
-            "e_rev_I" .= _e_rev_I, 
+            "cm" .= _cm,
+            "tau_refrac" .= _tau_refrac,
+            "v_spike" .= _v_spike,
+            "v_reset" .= _v_reset,
+            "v_rest" .= _v_rest,
+            "tau_m" .= _tau_m,
+            "i_offset" .= _i_offset,
+            "a" .= _a,
+            "b" .= _b,
+            "delta_T" .= _delta_T,
+            "tau_w" .= _tau_w,
+            "v_thresh" .= _v_thresh,
+            "e_rev_E" .= _e_rev_E,
+            "tau_syn_E" .= _tau_syn_E,
+            "e_rev_I" .= _e_rev_I,
             "tau_syn_I" .= _tau_syn_I
         ]
 
@@ -523,7 +523,7 @@ instance FromJSON NeuronType where
 -- | A Node is a vertex in the connectivity graph.
 data Node = Population {
         _numNeurons :: Integer, -- ^ number of neurons in the population
-        _neuronType :: NeuronType, 
+        _neuronType :: NeuronType,
         _label :: Label, -- ^ human readable label for the population
         _id :: Int, -- ^ internal identifier to keep track of the popultion
         _record_spikes :: Bool -- ^ whether to record spikes from this population
@@ -612,7 +612,7 @@ instance FromJSON Node where
                     o .: "id"
 
 type Weight = Float -- TODO: This is platform specific
-type Delay = Float -- TODO: This is platform specific 
+type Delay = Float -- TODO: This is platform specific
 type Probability = Float -- TODO: Very unsophisticated representation
 
 
@@ -751,7 +751,7 @@ data ExecutionTarget =
     } -- ^ first generation (wafer) brainscales system
     | Spikey {
         _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
-    } 
+    }
     | SpiNNaker -- ^ SpiNNaker neuromorphic platform
     | BrainScaleS2 -- ^ second generation brainscales system
     deriving (Eq, Show)
@@ -763,7 +763,7 @@ instance ToJSON ExecutionTarget where
       , "wafer" .= _wafer
       , "hicann" .= _hicann
       ]
-    toJSON SpiNNaker = object [ "kind" .= ("spinnaker" :: String) ] 
+    toJSON SpiNNaker = object [ "kind" .= ("spinnaker" :: String) ]
 
 instance FromJSON ExecutionTarget where
     parseJSON = withObject "execution_target" $ \o -> do
@@ -779,7 +779,7 @@ instance FromJSON ExecutionTarget where
             _ -> error "target not supported yet"
 
 {--
-An execution task specifies all information needed to execute a SNN 
+An execution task specifies all information needed to execute a SNN
 on a specific target.
 --}
 data Task = Task {
@@ -866,7 +866,7 @@ spikeSourcePoisson rate start = do
     nodes <>= [spikeSource]
     return spikeSource
 
-population :: Monad m => 
+population :: Monad m =>
     String -- ^ label of the population (used for printing)
     -> Integer -- ^ size of the population
     -> NeuronType -- ^ type of neuron

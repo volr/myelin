@@ -25,7 +25,7 @@ def read_experiment(input):
 
     with open(source, 'r') as file:
         data = json.load(file)
-        return addict.Dict(json.loads(data))
+        return addict.Dict(data)
 
 if __name__ == '__main__':
     """Parses and executes the Myelin model JSON input using a given target"""
