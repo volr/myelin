@@ -32,7 +32,6 @@ def create_node(node):
     Returns:
         Nest node created.
     """
-    print(node)
     return nest.Create(node.type, node.num_neurons, params=node.parameters)
 
 
