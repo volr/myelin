@@ -27,7 +27,7 @@ fi
 # Build
 docker build -t "$DOCKERTAG" -f "$DOCKERFILE" `pwd`
 # Test
-docker run -it "$DOCKERTAG" -i "/myelin/test/simple.json"
+docker run --rm -it "$DOCKERTAG" -i "/myelin/test/simple.json"
 
 # Test dockerlogin
 echo "Pushing to Docker"
