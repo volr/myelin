@@ -4,6 +4,7 @@ module Myelin.Nest.Types.MultiCompartment where
 import Control.Lens
 import Data.Aeson.TH
 
+-- | parameters that can be passed to a multi compartment model
 data Parameters = Parameters {
     _c_m :: Float,
     _e_ex :: Float,

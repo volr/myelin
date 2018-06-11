@@ -25,7 +25,7 @@ data Distribution =
         _lambda :: Float
     }
     | Gamma {
-    -- order, scale
+        -- order, scale
     }
     | Poisson {
         _lambda :: Float

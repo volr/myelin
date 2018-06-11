@@ -54,7 +54,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifCondAlphaRk5 {
         _a :: Float,
         _b :: Float,
@@ -84,7 +84,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifCondAlphaMultisynapse {
         _a :: Float,
         _b :: Float,
@@ -112,7 +112,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifCondBetaMultisynapse {
         _a :: Float,
         _b :: Float,
@@ -141,7 +141,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifCondExp {
         _a :: Float,
         _b :: Float,
@@ -170,7 +170,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifPscAlpha {
         _a :: Float,
         _b :: Float,
@@ -199,7 +199,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifPscDelta {
         _a :: Float,
         _b :: Float,
@@ -223,7 +223,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | AeifPscExp {
         _a :: Float,
         _b :: Float,
@@ -250,7 +250,7 @@ data Node =
         _v_reset :: Float,
         _v_th :: Float,
         _w :: Float
-    }    
+    }
     | Amat2PscExp {
         _alpha_1 :: Float,
         _alpha_2 :: Float,
@@ -1115,7 +1115,7 @@ data Node =
         _tau_ca :: Float,
         _tau_minus :: Float,
         _tau_minus_triplet :: Float
-    }    
+    }
     | RateTransformerThresholdLin {
         _alpha :: Float,
         _beta_ca :: Float,
@@ -1127,7 +1127,7 @@ data Node =
         _tau_minus :: Float,
         _tau_minus_triplet :: Float,
         _theta :: Float
-    }    
+    }
     | SiegertNeuron {
         _beta_ca :: Float,
         _ca :: Float,
@@ -1143,7 +1143,7 @@ data Node =
         _tau_syn :: Tuple,
         _theta :: Float,
         _v_reset :: Float
-    }    
+    }
     | SigmoidRateGg1998Ipn {
         _lambda :: Float,
         _beta_ca :: Float,
@@ -1536,7 +1536,7 @@ data Node =
         _rate :: Float,
         _start :: Float,
         _stop :: Float
-    }    
+    }
     | SinusoidalPoissonGenerator {
         _amplitude :: Float,
         _frequency :: Float,
@@ -1546,7 +1546,7 @@ data Node =
         _rate :: Float,
         _start :: Float,
         _stop :: Float
-    }    
+    }
     | SpikeDilutor {
         _origin :: Float,
         _p_copy :: Float,
@@ -2991,7 +2991,7 @@ weight_recorder = WeightRecorder {
     _withtime = True,
     _withweight = True
 }
--------- stimulators -------
+
 ac_generator = AcGenerator {
     _amplitude = 0.0,
     _frequency = 0.0,
