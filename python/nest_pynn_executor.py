@@ -92,7 +92,7 @@ def create_population(node):
     neuron_model = None
 
     def cellparams(neuron):
-        return {k: v for k, v in neuron.items() if k not in ["type"]}
+        return {k: v for k, v in neuron.items() if k not in ['type']}
 
     # TODO(Christian): This will only work in pyNN 0.9.2 because in 0.7.x
     # the cellparams are passed separately
@@ -114,6 +114,12 @@ def create_population(node):
         neuron_model = pynn.EIF_cond_alpha_isfa_ista(**cellparams(neuron))
     elif neuron.type == 'HHCondExp':
         neuron_model = pynn.HH_cond_exp(**cellparams(neuron))
+    elif neuron.type == 'SpikeSourceArray':
+        assert False
+    elif neuron.type == 'SpikeSourcePoisson':
+        assert False
+    elif neuron.type == 'SpikeSourceInhGamma':
+        assert False
     else:
         assert False  # unreachable
 
@@ -138,13 +144,11 @@ def create_node(node):
     elif (kind == "spike_source_array"):
         return pynn.Population(1, pynn.SpikeSourceArray, {'spike_times': node.spike_times}, label='input')
     elif (kind == "input"):
-        print("not yet supported")
-        pass
+        assert False
     elif (kind == "output"):
         return node
     elif (kind == "spike_source_poisson"):
-        print("Not supported")
-        pass
+        assert False
     else:
         assert False
 

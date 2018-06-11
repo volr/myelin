@@ -27,7 +27,6 @@ def create_node_test():
 
 def create_edge_test():
     nodes = {}
-    
     nodes[1] = ne.create_node(neuron_params(1))
     nodes[2] = ne.create_node(neuron_params(2))
     ne.create_edge(nodes, edge_params(nodes[1], nodes[2]))
