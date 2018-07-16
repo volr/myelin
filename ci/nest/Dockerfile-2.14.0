@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
      python-tk && \
      rm -rf /var/lib/apt/lists/*
 
-RUN pip install mpi4py pynn numpy scipy matplotlib addict future
+RUN pip install mpi4py pynn numpy scipy matplotlib addict future elephant
 
 RUN wget https://github.com/nest/nest-simulator/archive/v2.14.0.tar.gz
 RUN tar xf v2.14.0.tar.gz
