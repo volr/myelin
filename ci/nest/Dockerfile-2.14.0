@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
      libarchive-dev \
      libgsl-dev \
      libopenmpi-dev \
+     ssh \
      python-pip \
      python-tk && \
      rm -rf /var/lib/apt/lists/*
