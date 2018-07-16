@@ -6,7 +6,7 @@ from quantities import Hz, s, ms
 def square(xs):
     return xs*xs
 
-def function_task(f = square, min = -10, max = 10, step = 0.01):
+def function_task(f = square, min = -10, max = 10, step = 0.5):
     """
     """
     xs = np.arange(start = min, stop = max, step = step)
@@ -58,4 +58,4 @@ def debug_spike_train(spiketrain_list, i, j):
 # use to generate input
 # and then use in spike_source_array
 
-# debug_spike_train(spiketrain_list = generate_spiketrain_list(function_task()[1]))
+#debug_spike_train(spiketrain_list = generate_spiketrain_list(function_task()[1]), i=1, j=3)
