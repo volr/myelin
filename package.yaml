@@ -20,7 +20,7 @@ extra-source-files:
 description:         Please see the README on Github at <https://github.com/cpehle/myelin#readme>
 
 dependencies:
-- base >= 4.7 && < 5
+- base >= 4.7 && < 4.11
 - lens
 - bytestring
 - proto-lens-protoc
@@ -29,7 +29,6 @@ dependencies:
 - aeson
 - text
 - graphviz
-- transformers
 - aeson-pretty
 - bytestring
 - process
