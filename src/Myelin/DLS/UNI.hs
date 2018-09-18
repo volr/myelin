@@ -19,11 +19,13 @@ data Term a =
   | P a
   deriving (Eq, Show, Functor, Foldable)
 
+instance Semigroup (Term a) where
+  (Seq a) <> (Seq b) = Seq (a <> b)
+  (Seq a) <> b = Seq (a <> [b])
+  a       <> (Seq b) = Seq ([a] <> b)
+  a       <> b = Seq [a,b]
+
 instance Monoid (Term a) where
-  mappend (Seq a) (Seq b) = Seq (a <> b)
-  mappend (Seq a) b = Seq (a <> [b])
-  mappend a (Seq b) = Seq ([a] <> b)
-  mappend a b = Seq [a,b]
   mempty = Seq []
 
 pmappend :: Term a -> Term a -> Term a
