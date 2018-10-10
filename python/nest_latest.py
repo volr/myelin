@@ -36,9 +36,6 @@ def create_node(node):
 
     # Converting pynn node names to NEST
     # See https://github.com/NeuralEnsemble/PyNN/blob/master/pyNN/nest/standardmodels/cells.py
-    if node.type == 'output':
-        return nest.Create('spike_detector', params={'withtime': True, 'withgid': True})
-
     if node.type == 'spike_source_array':
         # https://github.com/nest/nest-simulator/blob/master/models/spike_generator.cpp
         return nest.Create('spike_generator', params=node.parameters)
@@ -48,8 +45,13 @@ def create_node(node):
 
     return nest.Create(node['neuron_type']['type'], node.num_neurons, params=node.parameters)
 
+def create_detector(node):
+    detector = nest.Create('spike_detector', params={'withtime':True,
+        'withgid':True})
+    nest.Connect(node, detector)
+    return detector
 
-def execute(conf):
+def execute(conf, train, test):
     """Execute a given nest configuration.
 
     Args:
@@ -57,9 +59,10 @@ def execute(conf):
     """
     blocks = conf.network.blocks
     block = blocks[0]
+    spikesources = []
+    spikedetectors = []
     nodes = {}
     simtime = 100.0
-    print(nest.Models)
 
     nest.ResetKernel()
     for node in block.nodes:
@@ -67,5 +70,14 @@ def execute(conf):
 
     for edge in block.edges:
         create_edge(nodes, edge)
+        
+    #for in_nodes in block.inputs:
+    #    source = create_source(
+
+    for output in block.outputs:
+        detector = create_detector(nodes[node.id])
+        spikedetectors.append(detector)
 
     nest.Simulate(simtime)
+
+    print(spikedetectors[0][0])

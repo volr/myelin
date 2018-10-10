@@ -7,3 +7,6 @@ ci/music-master/
 __pycache__
 .vscode
 *.swp
+*.swo
+*.pyc
+*.json
