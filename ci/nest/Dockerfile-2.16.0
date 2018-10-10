@@ -1,5 +1,5 @@
 ##
-## Dockerfile for NEST v. 2.14.0
+## Dockerfile for NEST v. 2.16.0
 ## Documentation: http://www.nest-simulator.org/installation/
 ##
 
@@ -7,7 +7,7 @@ FROM ubuntu:18.04
 
 # Set install to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
-ENV VERSION="2.14.0"
+ENV VERSION="2.16.0"
 
 # Install dependencies and clean up
 RUN apt-get update && apt-get install -y \
@@ -22,10 +22,10 @@ RUN apt-get update && apt-get install -y \
      libopenmpi-dev \
      ssh \
      python-pip \
+     git \
+     libtool \
      python-tk && \
      rm -rf /var/lib/apt/lists/*
-
-RUN pip install mpi4py pynn numpy scipy matplotlib addict future elephant
 
 RUN wget https://github.com/nest/nest-simulator/archive/v${VERSION}.tar.gz
 RUN tar xf v${VERSION}.tar.gz
@@ -39,12 +39,15 @@ RUN make install
 #RUN make installcheck # check integrity of nest install
 
 # remove intermediate files
-RUN rm /v${VERSION}.tar.gz
-RUN rm -rf /nest-simulator-v${VERSION}-build
-RUN rm -rf /nest-simulator-${VERSION}
+RUN rm /v$VERSION.tar.gz
+RUN rm -rf /nest-simulator-v$VERSION-build
+RUN rm -rf /nest-simulator-$VERSION
 
-ENV PATH="${PATH}:/nest-${VERSION}/bin/"
+ENV PATH="${PATH}:/nest-${VERSION}/bin/:/nest-${VERSION}/lib"
 ENV PYTHONPATH="/nest-${VERSION}/lib/python2.7/site-packages/"
+
+RUN pip install --no-binary :all: PyNN
+RUN pip install mpi4py numpy scipy matplotlib addict future lazyarray neo
 
 # Prepare working environment
 RUN mkdir /data
