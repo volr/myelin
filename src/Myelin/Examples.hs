@@ -17,7 +17,7 @@ net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1 .. 100]
 
-    a <- population "a" 5 $ if_current_exponential & cm .~ [0.1, 0.3, 0.4, 0.5, 0.6]
+    a <- population "a" 5 $ if_current_exponential 
     b <- population "b" 10 $ if_current_exponential 
     c <- population "c" 5  $ if_current_exponential 
     
