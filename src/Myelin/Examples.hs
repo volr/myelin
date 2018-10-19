@@ -27,15 +27,14 @@ net = do
     projection (AllToAll 1.0 False) (Static Excitatory) a b
     projection (AllToAll 1.0 False) (Static Excitatory) b c
     projection (AllToAll 1.0 False) (Static Excitatory) c a
-    
-    output <- fileOutput "out.txt"
+   
+    output <- output
     projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
 net2 :: Monad m => SNN () m
 net2 = do
     spike_source <- spikeSourceArray [10 .. 51]
     neurons <- population "neurons" 3 izhikevich
-    output <- fileOutput "out.txt"
     projection (OneToOne 3.0) (Static Excitatory) spike_source neurons
     return ()
        

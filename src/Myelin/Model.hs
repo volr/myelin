@@ -36,11 +36,9 @@ data Node = Population {
         _record_spikes :: Bool -- ^ whether to record spikes from this population
     }
     | Input {
-        _fileName :: String,
         _id :: Int
     }
     | Output {
-        _fileName :: String,
         _id :: Int
     }
     | SpikeSourceArray {
@@ -69,12 +67,10 @@ instance ToJSON Node where
         ]
     toJSON Input{..} = object [
             "type" .= ("input" :: String),
-            "file_name" .= _fileName,
             "id" .= _id
         ]
     toJSON Output{..} = object [
             "type" .= ("output" :: String),
-            "file_name" .= _fileName,
             "id" .= _id
         ]
     toJSON SpikeSourceArray{..} = object [
@@ -102,11 +98,9 @@ instance FromJSON Node where
                     o .: "record_spikes"
             "input" ->
                 Input <$>
-                    o .: "file_name" <*>
                     o .: "id"
             "output" ->
                 Output <$>
-                    o .: "file_name" <*>
                     o .: "id"
             "spike_source_poisson" ->
                 SpikeSourcePoisson <$>
@@ -122,7 +116,7 @@ type Weight = Float -- TODO: This is platform specific
 type Delay = Float -- TODO: This is platform specific
 type Probability = Float -- TODO: Very unsophisticated representation
 
-
+-- | Types of projections that determines the method with which 'Node's connect
 data ProjectionType =
     AllToAll {
         _weight :: Weight,
@@ -196,11 +190,12 @@ instance ToJSON ProjectionType where
 
 data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)
 
-data ProjectionTarget =
+-- | The dynamic of a projection
+data ProjectionDynamics =
     Static SynapseEffect
     deriving (Eq, Show)
 
-instance ToJSON ProjectionTarget where
+instance ToJSON ProjectionDynamics where
     toJSON (Static Excitatory) = object [
             "kind" .= ("static" :: String),
             "effect" .= ("excitatory" :: String)
@@ -210,7 +205,7 @@ instance ToJSON ProjectionTarget where
             "effect" .= ("inhibitory" :: String)
         ]
 
-instance FromJSON ProjectionTarget where
+instance FromJSON ProjectionDynamics where
     parseJSON = withObject "projection_target" $ \o -> do
             kind :: String <- o .: "kind"
             effect :: String <- o .: "effect"
@@ -218,10 +213,12 @@ instance FromJSON ProjectionTarget where
                 "excitatory" -> return (Static Excitatory)
                 "inhibitory" -> return (Static Inhibitory)
 
+-- | An edge between two nodes describing the 'ProjectionType' and
+-- 'ProjectionDynamics'
 data Edge =
       Projection {
           _projectionType :: ProjectionType,
-          _projectionTarget :: ProjectionTarget,
+          _projectionTarget :: ProjectionDynamics,
           _input :: Node,
           _output :: Node
       } deriving (Eq, Show)
