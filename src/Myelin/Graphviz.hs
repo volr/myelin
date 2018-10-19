@@ -16,6 +16,8 @@ import Data.Text
 import Data.Text.Lazy (toStrict)
 
 import Myelin.SNN
+import Myelin.Model
+import Myelin.Neuron
 
 toGraph :: Network -> DotGraph String
 toGraph b = digraph (Str "Network") $ do

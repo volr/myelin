@@ -2,6 +2,7 @@
 module Myelin.DLS where
 
 import Myelin.SNN
+import Myelin.Model
 
 data Location = Location Int
 

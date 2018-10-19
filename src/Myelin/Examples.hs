@@ -12,6 +12,8 @@ import Data.Aeson.Encode.Pretty
 import Data.ByteString.Lazy.Char8 as B
 
 import Myelin.SNN
+import Myelin.Neuron
+import Myelin.Model
 
 net :: Monad m => SNN () m
 net = do
@@ -57,5 +59,5 @@ exampleTask =
         _executionTarget = Nest 0.1 0.5,
         _simulationTime = 100.0,
         _network = network
-	}
+        }
     where (_, network) = runState netTest initialNetwork
