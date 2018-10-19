@@ -15,17 +15,17 @@ data HardwareNeuron = HardwareNeuron {
 
 numHardwareNeurons = 32 -- hardcoded for now
 
-mapBlockToHardware :: BlockState -> Maybe HardwareConfig
-mapBlockToHardware BlockState{..} = undefined
+mapNetworkToHardware :: Network -> Maybe HardwareConfig
+mapNetworkToHardware Network{..} = undefined
 
-placeNeuronPopulations :: BlockState -> Int
-placeNeuronPopulations BlockState{..} = undefined
+placeNeuronPopulations :: Network -> Int
+placeNeuronPopulations Network{..} = undefined
     where 
         numberOfNeurons = sum $ map neuronCount _nodes
         neuronCount Population{..} = _numNeurons
         neuronCount _ = 0
 
-mapEdgesToWeightMatrix :: BlockState -> Int
-mapEdgesToWeightMatrix BlockState{..} = undefined
+mapEdgesToWeightMatrix :: Network -> Int
+mapEdgesToWeightMatrix Network{..} = undefined
 
 

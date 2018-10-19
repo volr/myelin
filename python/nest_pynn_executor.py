@@ -45,9 +45,19 @@ def execute(conf, train, test):
     blocks = net.blocks
     # only support one block for now
     b = blocks[0]
-    model = pynn_model.Model(b)
+    model = pynn_model.Model(pynn, b)
     model.train(train)
     model.predict(test)
+
+def load_conf(conf_file):
+    with open(conf_file) as file_pointer:
+        conf = addict.Dict(json.load(file_pointer))
+    return conf
+
+def load_data(data_file):
+    with open(data_file) as file_pointer:
+        data = json.load(file_pointer)
+    return data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='nest pynn executor')
@@ -57,17 +67,11 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--data", metavar="data-file",
                         type=str, default=None,
                         help="Input file for data in JSON. Should be formatted"+
-                              "as a tuple of training and testing each containing" +
-                              "a tuple of data and labels.")
+                             "as a tuple of training and testing each containing" +
+                             "a tuple of data and labels.")
     args = parser.parse_args()
 
-    with open(args.input) as input_file:
-        conf = addict.Dict(json.load(input_file))
-        assert conf.execution_target.kind == "nest"
-
-    with open(args.data) as data_file:
-        data = json.load(data_file)
-        train, test = data
-
+    conf = load_conf(args.input)
+    train, test = load_data(args.data)
     result = execute(conf, train, test)
     print(result)

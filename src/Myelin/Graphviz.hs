@@ -17,7 +17,7 @@ import Data.Text.Lazy (toStrict)
 
 import Myelin.SNN
 
-toGraph :: BlockState -> DotGraph String
+toGraph :: Network -> DotGraph String
 toGraph b = digraph (Str "Network") $ do
     nodes <- forM (_nodes b) $ node' . nodeLabel
     forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
@@ -32,5 +32,5 @@ renderNetwork = renderDot . toDot . toGraph
 
 run :: Monad m => Task -> m Text
 run task =
-    let dot = renderNetwork (Prelude.head (_blocks $ _network $ task)) in
+    let dot = renderNetwork (_network $ task) in
     return $ toStrict dot

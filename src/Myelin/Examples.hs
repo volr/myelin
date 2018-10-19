@@ -45,11 +45,9 @@ toTask model target runtime =
   Task {
       _executionTarget = target,
       _simulationTime = runtime,
-      _network = Network {
-          _blocks = [block]
+      _network = network
       }
-  }
-  where (_, block) = runState model initialBlockState
+  where (_, network) = runState model initialNetwork
 
 taskToJSON :: Task -> String
 taskToJSON = B.unpack . encodePretty . toJSON
@@ -58,8 +56,6 @@ exampleTask =
     Task {
         _executionTarget = Nest 0.1 0.5,
         _simulationTime = 100.0,
-        _network = Network {
-            _blocks = [block]
-        }
-    }
-    where (_, block) = runState netTest initialBlockState
+        _network = network
+	}
+    where (_, network) = runState netTest initialNetwork

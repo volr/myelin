@@ -23,8 +23,13 @@ def weight_delta_hidden(output, errors, prev_weights, curr_weights, prev_spikes,
             prev_spikes[i])
     return numerator / denominator
 
-def error_function_sq(outputs, expectations):
-    """Error function for spike rates"""
+def error_function_sq(actual, expected):
+    """Error function for spike rates.
+    
+    Args:
+      actual ([int]): The actual number of spikes per neuron
+      expected ([int]): The expected number of spikes per neuron
+    """
     errors = [math.pow(actual - expected, 2) for actual, expected in
         zip(outputs, expectations)]
     return sum(errors) / 2

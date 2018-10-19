@@ -802,19 +802,6 @@ instance FromJSON Task where
                  o .: "simulation_time"
 
 data Network = Network {
-    _blocks :: [BlockState]
-} deriving (Eq, Show)
-
-instance ToJSON Network where
-    toJSON Network {..} = object [
-            "blocks" .= _blocks
-        ]
-
-instance FromJSON Network where
-    parseJSON = withObject "network" $ \o ->
-        Network <$> o .: "blocks"
-
-data BlockState = BlockState {
     _nextId :: Int,
     _inputs :: [Node],
     _nodes :: [Node],
@@ -822,8 +809,8 @@ data BlockState = BlockState {
     _outputs :: [Node]
 } deriving (Eq, Show)
 
-instance ToJSON BlockState where
-    toJSON BlockState {..} = object [
+instance ToJSON Network where
+    toJSON Network {..} = object [
             "next_id" .= _nextId,
             "nodes" .= _nodes,
             "edges" .= _edges,
@@ -831,20 +818,20 @@ instance ToJSON BlockState where
             "outputs" .= _outputs
         ]
 
-instance FromJSON BlockState where
-    parseJSON = withObject "block_state" $ \o ->
-        BlockState <$>
+instance FromJSON Network where
+    parseJSON = withObject "network" $ \o ->
+        Network <$>
         o .: "next_id" <*>
         o .: "nodes" <*>
         o .: "edges" <*>
         o .: "inputs" <*>
         o .: "outputs"
 
-makeLenses ''BlockState
+makeLenses ''Network
 
-type SNN a m = StateT BlockState m a
+type SNN a m = StateT Network m a
 
-initialBlockState = BlockState 0 [] [] [] []
+initialNetwork = Network 0 [] [] [] []
 
 newId :: Monad m => SNN Int m
 newId = do
