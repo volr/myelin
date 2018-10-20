@@ -27,9 +27,6 @@ net = do
     projection (AllToAll 1.0 False) (Static Excitatory) a b
     projection (AllToAll 1.0 False) (Static Excitatory) b c
     projection (AllToAll 1.0 False) (Static Excitatory) c a
-   
-    output <- output
-    projection (AllToAll 1.0 False) (Static Inhibitory) c output
 
 net2 :: Monad m => SNN () m
 net2 = do

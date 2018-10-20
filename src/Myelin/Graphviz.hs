@@ -25,8 +25,6 @@ toGraph b = digraph (Str "Network") $ do
     forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
     where nodeLabel x = case x of
                             Population{..} -> "population:id:" ++ show _id ++ ":" ++ _label
-                            Input{..} -> "input:" ++ show _id 
-                            Output{..} -> "output:" ++ show _id 
                             SpikeSourceArray{..} -> "spike_source_array:" ++ show _id
                             SpikeSourcePoisson{..} -> "spike_source_poisson:" ++ show _id
 

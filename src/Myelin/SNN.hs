@@ -172,19 +172,3 @@ population  label i typ = do
 -- node, as prescribed by the 'ProjectionType' and 'ProjectionDynamics'
 projection :: Monad m => ProjectionType -> ProjectionDynamics -> Node -> Node -> SNN () m
 projection proj target p0 p1 = edges <>= [Projection proj target p0 p1]
-
--- | Creates an input node, 
-input :: Monad m => SNN Node m
-input = do
-    i <- newId
-    let input = Input i
-    nodes <>= [input]
-    return input
-
--- | Creates an output node, from which spikes will be recorded
-output :: Monad m => SNN Node m
-output = do
-    i <- newId
-    let output = Output i
-    nodes <>= [output]
-    return output

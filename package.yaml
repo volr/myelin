@@ -35,6 +35,8 @@ dependencies:
 - containers
 - hmatrix
 - dimensional
+- raw-strings-qq
+- neat-interpolation
 
 library:
   source-dirs: src

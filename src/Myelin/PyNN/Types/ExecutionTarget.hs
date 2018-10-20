@@ -1,6 +1,6 @@
 module Myelin.PyNN.Types.ExecutionTarget where
 
-
+-- | The targets of PyNN
 data ExecutionTarget =
     Nest {
         _minTimestep :: Float,

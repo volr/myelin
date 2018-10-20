@@ -35,12 +35,6 @@ data Node = Population {
         _id :: Int, -- ^ internal identifier to keep track of the popultion
         _record_spikes :: Bool -- ^ whether to record spikes from this population
     }
-    | Input {
-        _id :: Int
-    }
-    | Output {
-        _id :: Int
-    }
     | SpikeSourceArray {
         _spikeTimes :: [Float],
         _id :: Int
@@ -65,14 +59,6 @@ instance ToJSON Node where
         "id" .= _id,
         "record_spikes" .= _record_spikes
         ]
-    toJSON Input{..} = object [
-            "type" .= ("input" :: String),
-            "id" .= _id
-        ]
-    toJSON Output{..} = object [
-            "type" .= ("output" :: String),
-            "id" .= _id
-        ]
     toJSON SpikeSourceArray{..} = object [
             "type" .= ("spike_source_array" :: String),
             "spike_times" .= _spikeTimes,
@@ -96,12 +82,6 @@ instance FromJSON Node where
                     o .: "label" <*>
                     o .: "id" <*>
                     o .: "record_spikes"
-            "input" ->
-                Input <$>
-                    o .: "id"
-            "output" ->
-                Output <$>
-                    o .: "id"
             "spike_source_poisson" ->
                 SpikeSourcePoisson <$>
                     o .: "rate" <*>
@@ -190,7 +170,7 @@ instance ToJSON ProjectionType where
 
 data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)
 
--- | The dynamic of a projection
+-- | The dynamics of a projection
 data ProjectionDynamics =
     Static SynapseEffect
     deriving (Eq, Show)
