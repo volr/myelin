@@ -22,10 +22,10 @@ import Myelin.Model
 import Myelin.Neuron
 import Myelin.SNN
 
-data PyNNPreample
-  = PyNNPreample 
+data PyNNPreamble
+  = PyNNPreamble 
     { pyNNImport :: String
-    , instrumentation :: String
+    , configuration :: String
     }
     deriving (Eq, Show)
 
@@ -43,23 +43,31 @@ emptyPyNNModel = PyNNModel [] Map.empty Map.empty
 
 type PyNNState = ExceptT String (State PyNNModel)
 
--- translate :: Network -> PyNNPreample -> String
--- translate network preample = 
---   
--- 
--- translate' :: Network -> String
--- translate 
+translate :: Network -> PyNNPreamble -> Either String String
+translate network (PyNNPreamble {..}) = 
+  let (result, (PyNNModel {..})) = runState (runExceptT $ translate' network) emptyPyNNModel
+  in  case result of
+        Left error -> Left $ "Failed to parse to Python: " ++ error
+	Right _ ->
+          let nodeLines = unlines $ Map.elems $ _pyNNNodes
+              projectionLines = unlines $ Map.elems $ _pyNNProjections
+              declarationLines = unlines $ _declarations
+              preambleLines = pyNNImport ++ "\n" ++ configuration
+          in Right $ unlines [nodeLines, projectionLines, declarationLines, preambleLines]
+ 
+translate' :: Network -> PyNNState ()
+translate' _ = return ()
 
--- | The Python PyNN preample for import statements
-pyNNPreample :: PyNNPreample -> String
-pyNNPreample PyNNPreample {..} = [i|
+-- | The Python PyNN preamble for import statements
+pyNNPreamble :: PyNNPreamble -> String
+pyNNPreamble PyNNPreamble {..} = [i|
 import addict
 import numpy
 import #{pyNNImport} as pynn
 
 import pynn_utils as pu
 
-#{instrumentation}
+#{configuration}
 |]
 
 pyNNNode :: Node -> PyNNState String
