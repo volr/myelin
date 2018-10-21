@@ -1,18 +1,22 @@
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Myelin.PyNN.PyNN where
 
 import Prelude hiding (id)
 
+import Control.Monad.Except
+import Control.Monad.State.Lazy
 import Control.Lens
 import Data.Aeson
 import qualified Data.Map.Strict as Map
+import Data.String.Interpolate
 import Data.Text (pack, unpack)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Text.RawString.QQ
-import NeatInterpolation (text)
 
 import Myelin.Model
 import Myelin.Neuron
@@ -23,9 +27,21 @@ data PyNNPreample
     { pyNNImport :: String
     , instrumentation :: String
     }
+    deriving (Eq, Show)
 
--- | A variable declaration in Python
-type PythonDeclaration = (String, String)
+data PyNNModel = PyNNModel 
+  { _declarations :: [String]
+  , _pyNNNodes :: Map.Map String String -- ^ Nodes indexed by their Python variables
+  , _pyNNProjections :: Map.Map String String -- ^ Projections between nodes indexed by their python variables
+  }
+  deriving (Eq, Show)
+
+makeLenses ''PyNNModel
+
+-- | An empty initial model
+emptyPyNNModel = PyNNModel [] Map.empty Map.empty
+
+type PyNNState = ExceptT String (State PyNNModel)
 
 -- translate :: Network -> PyNNPreample -> String
 -- translate network preample = 
@@ -36,53 +52,71 @@ type PythonDeclaration = (String, String)
 
 -- | The Python PyNN preample for import statements
 pyNNPreample :: PyNNPreample -> String
-pyNNPreample PyNNPreample {..} = unpack $ [text|
+pyNNPreample PyNNPreample {..} = [i|
 import addict
 import numpy
-import ${pack pyNNImport} as pynn
+import #{pyNNImport} as pynn
 
-${pack instrumentation}
+import pynn_utils as pu
+
+#{instrumentation}
 |]
 
-pyNNNode :: Node -> String
+pyNNNode :: Node -> PyNNState String
 pyNNNode node = case node of
-  Population { .. } -> 
-    let (_, code) = nodeVariable (node ^. id) $ pyNNPopulation _neuronType
-    in  code
+  Population {..} ->
+    nodeVariable _id $ pyNNLearningNode $ pyNNPopulation _neuronType
+
 --   SpikeSourceArray { .. } -> 
 --   SpikeSourcePoisson { .. } -> 
 
+-- | Converts the code of a regular PyNN node into a learning node
+pyNNLearningNode :: String -> String
+pyNNLearningNode population = "pu.LearningNode(" ++ population ++ ")"
+
+-- | Returns the code for a PyNN population
 pyNNPopulation :: NeuronType -> String
 pyNNPopulation neuronType = 
   let params = BS.unpack $ encode neuronType
   in  case neuronType of
         IFCondExp { .. } -> "pynn.IF_cond_exp(" ++ params ++ ")"
 
-pyNNEdge :: Edge -> String
-pyNNEdge Projection { .. } =
-  let connector = pyNNConnector _projectionType
+-- | Creates and stores an Edge as a PyNN projection
+pyNNEdge :: Edge -> PyNNState String
+pyNNEdge Projection { .. } = do
+  let connector = pyNNConnector _effect
 --  let dynamics = pyNNDynamics projectionDynamics
-      nodeRef1 = nodeReference $ _input ^. id
-      nodeRef2 = nodeReference $ _output ^. id
-      code = "pynn.Projection(" ++ nodeRef1 ++", " ++ nodeRef2 ++ ", connector = " ++ connector ++ ")"
-      (_, definition) = projectionVariable 0 code
-  in  definition
+  let nodeRef1 = nodeReference $ _input ^. id
+  let nodeRef2 = nodeReference $ _output ^. id
+  let code = "pynn.Projection(" ++ nodeRef1 ++", " ++ nodeRef2 ++ ", connector = " ++ connector ++ ")"
+  edgeRef <- projectionVariable code
+  declarations <>= [edgeRef ++ ".set(weight=numpy.random.normal)", nodeRef1 ++ ".connect(" ++ nodeRef2 ++ ")"]
+  return edgeRef
 
-pyNNConnector :: ProjectionType -> String
-pyNNConnector (AllToAll _ _)  = "pynn.AllToAllConnector()"
+pyNNConnector :: ProjectionEffect -> String
+pyNNConnector (Static Excitatory (AllToAll _))  = "pynn.AllToAllConnector()"
 
 -- pyNNDynamics :: ProjectionDynamics -> String
 -- pyNNDynamics Static Excitatory = 
 
 nodeReference :: Int -> String
-nodeReference id = "node" ++ (show id)
+nodeReference nodeId = "node" ++ (show nodeId)
 
-nodeVariable :: Int -> String -> PythonDeclaration
-nodeVariable id code = pythonVariable ("node" ++ (show id)) code
+nodeVariable :: Int -> String -> PyNNState String
+nodeVariable nodeId code = do
+  let name = "node" ++ (show nodeId)
+  let variable = pythonVariable name code
+  pyNNNodes %= (Map.insert name variable)
+  return name
 
-projectionVariable :: Int -> String -> PythonDeclaration
-projectionVariable id code = pythonVariable ("proj" ++ (show id)) code
+projectionVariable :: String -> PyNNState String
+projectionVariable code = do
+  projections <- use pyNNProjections
+  let name = "proj" ++ (show $ Map.size projections)
+  let variable = pythonVariable name code
+  pyNNProjections %= (Map.insert name variable)
+  return name
 
-pythonVariable :: String -> String -> PythonDeclaration
-pythonVariable name value = (name, name ++ " = " ++ value)
+pythonVariable :: String -> String -> String
+pythonVariable name value = name ++ " = " ++ value
 

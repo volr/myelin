@@ -23,16 +23,16 @@ net = do
     b <- population "b" 10 $ if_current_exponential 
     c <- population "c" 5  $ if_current_exponential 
     
-    projection (AllToAll 1.0 False) (Static Excitatory) input a
-    projection (AllToAll 1.0 False) (Static Excitatory) a b
-    projection (AllToAll 1.0 False) (Static Excitatory) b c
-    projection (AllToAll 1.0 False) (Static Excitatory) c a
+    projection (Static Excitatory (AllToAll (Constant 1.0))) input a
+    projection (Static Excitatory (AllToAll (Constant 1.0))) a b
+    projection (Static Excitatory (AllToAll (Constant 1.0))) b c
+    projection (Static Excitatory (AllToAll (Constant 1.0))) c a
 
 net2 :: Monad m => SNN () m
 net2 = do
     spike_source <- spikeSourceArray [10 .. 51]
     neurons <- population "neurons" 3 izhikevich
-    projection (OneToOne 3.0) (Static Excitatory) spike_source neurons
+    projection (Static Excitatory (OneToOne (Constant 3.0))) spike_source neurons
     return ()
        
 netTest :: SNN () Identity
@@ -46,9 +46,6 @@ toTask model target runtime =
       _network = network
       }
   where (_, network) = runState model initialNetwork
-
-taskToJSON :: Task -> String
-taskToJSON = B.unpack . encodePretty . toJSON
 
 exampleTask =
     Task {

@@ -51,28 +51,6 @@ data ExecutionTarget =
     -- | BrainScaleS2 -- ^ second generation brainscales system
     deriving (Eq, Show)
 
-instance ToJSON ExecutionTarget where
-    toJSON Nest{..} = object [ "kind" .= ("nest" :: String)]
-    toJSON BrainScaleS{..} = object
-      [ "kind" .= ("brainscales" :: String)
-      , "wafer" .= _wafer
-      , "hicann" .= _hicann
-      ]
-    -- toJSON SpiNNaker = object [ "kind" .= ("spinnaker" :: String) ]
-
-instance FromJSON ExecutionTarget where
-    parseJSON = withObject "execution_target" $ \o -> do
-        kind :: String <- o .: "kind"
-        case kind of
-            "brainscales" -> BrainScaleS <$>
-                        o .: "wafer" <*>
-                        o .: "hicann"
-            "nest" -> Nest <$>
-                        o .: "min_timestep" <*>
-                        o .: "max_timestep"
-      --    "spinnaker" -> return SpiNNaker
-            _ -> error "target not supported yet"
-
 {--
 An execution task specifies all information needed to execute a SNN
 on a specific target.
@@ -83,19 +61,6 @@ data Task = Task {
     _simulationTime :: Double -- ^ simulation time in milliseconds
 } deriving (Eq, Show)
 
-instance ToJSON Task where
-    toJSON Task {..} = object [
-            "execution_target" .= _executionTarget,
-            "network" .= _network,
-            "simulation_time" .= _simulationTime
-        ]
-
-instance FromJSON Task where
-    parseJSON = withObject "task" $ \o ->
-        Task <$> o .: "execution_target" <*>
-                 o .: "network" <*>
-                 o .: "simulation_time"
-
 -- | A spiking neural network described as a list of inputs, nodes, edges and
 -- outputs. Also keeps a counter to uniquely label items in the network.
 data Network = Network {
@@ -105,24 +70,6 @@ data Network = Network {
     _edges :: [Edge],
     _outputs :: [Node]
 } deriving (Eq, Show)
-
-instance ToJSON Network where
-    toJSON Network {..} = object [
-            "next_id" .= _nextId,
-            "nodes" .= _nodes,
-            "edges" .= _edges,
-            "inputs" .= _inputs,
-            "outputs" .= _outputs
-        ]
-
-instance FromJSON Network where
-    parseJSON = withObject "network" $ \o ->
-        Network <$>
-        o .: "next_id" <*>
-        o .: "nodes" <*>
-        o .: "edges" <*>
-        o .: "inputs" <*>
-        o .: "outputs"
 
 makeLenses ''Network
 
@@ -164,11 +111,11 @@ population :: Monad m =>
     -> SNN Node m
 population  label i typ = do
     l <- newId
-    let pop = Population i typ label l True
+    let pop = Population i typ label l 
     nodes <>= [pop]
     return pop
 
 -- | Projects two 'Node's together by projecting the first node to the second
--- node, as prescribed by the 'ProjectionType' and 'ProjectionDynamics'
-projection :: Monad m => ProjectionType -> ProjectionDynamics -> Node -> Node -> SNN () m
-projection proj target p0 p1 = edges <>= [Projection proj target p0 p1]
+-- node, as prescribed by the 'ProjectionEffect' 
+projection :: Monad m => ProjectionEffect -> Node -> Node -> SNN () m
+projection proj p0 p1 = edges <>= [Projection proj p0 p1]

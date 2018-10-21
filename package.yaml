@@ -1,6 +1,6 @@
 name:                myelin
 version:             0.1.0.0
-github:              "cpehle/myelin"
+github:              "volr/myelin"
 license:             BSD3
 author:              "Christian Pehle"
 maintainer:          "christian.pehle@kip.uni-heidelberg.de"
@@ -36,7 +36,8 @@ dependencies:
 - hmatrix
 - dimensional
 - raw-strings-qq
-- neat-interpolation
+- interpolate
+- mtl
 
 library:
   source-dirs: src

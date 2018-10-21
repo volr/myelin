@@ -32,8 +32,7 @@ data Node = Population {
         _numNeurons :: Integer, -- ^ number of neurons in the population
         _neuronType :: NeuronType,
         _label :: Label, -- ^ human readable label for the population
-        _id :: Int, -- ^ internal identifier to keep track of the popultion
-        _record_spikes :: Bool -- ^ whether to record spikes from this population
+        _id :: Int -- ^ internal identifier to keep track of the population
     }
     | SpikeSourceArray {
         _spikeTimes :: [Float],
@@ -49,176 +48,59 @@ data Node = Population {
 makeLenses ''Node
 makePrisms ''Node
 
-
-instance ToJSON Node where
-    toJSON Population{..} = object [
-        "type" .= ("population" :: String),
-        "num_neurons" .= _numNeurons,
-        "neuron_type" .= _neuronType,
-        "label" .= _label,
-        "id" .= _id,
-        "record_spikes" .= _record_spikes
-        ]
-    toJSON SpikeSourceArray{..} = object [
-            "type" .= ("spike_source_array" :: String),
-            "spike_times" .= _spikeTimes,
-            "id" .= _id
-        ]
-    toJSON SpikeSourcePoisson{..} = object [
-            "type" .= ("spike_source_poisson" :: String),
-            "rate" .= _rate,
-            "start" .= _start,
-            "id" .= _id
-        ]
-
-instance FromJSON Node where
-    parseJSON = withObject "node" $ \o -> do
-        typ :: String <- o .: "type"
-        case typ of
-            "population" ->
-                Population <$>
-                    o .: "num_neurons" <*>
-                    o .: "neuron_type" <*>
-                    o .: "label" <*>
-                    o .: "id" <*>
-                    o .: "record_spikes"
-            "spike_source_poisson" ->
-                SpikeSourcePoisson <$>
-                    o .: "rate" <*>
-                    o .: "start" <*>
-                    o .: "id"
-            "spike_source_array" ->
-                SpikeSourceArray <$>
-                    o .: "spike_times" <*>
-                    o .: "id"
-
-type Weight = Float -- TODO: This is platform specific
 type Delay = Float -- TODO: This is platform specific
 type Probability = Float -- TODO: Very unsophisticated representation
 
--- | Types of projections that determines the method with which 'Node's connect
-data ProjectionType =
-    AllToAll {
-        _weight :: Weight,
-        _allow_self_connections :: Bool -- TODO
+-- | Weight types that describes weights for a projection
+data Weights 
+  = Constant Float
+  | GaussianRandom 
+    { mean :: Float
+    , scale :: Float
     }
-    | OneToOne {
-        _weight :: Weight
+  -- TODO: Add matrix
+  -- | Matrix L
+  deriving (Eq, Show)
+
+makeLenses ''Weights
+makePrisms ''Weights
+
+-- | Types of connections in a projection from one neuron population to another
+data ConnectionType
+  = AllToAll
+    { _weights :: Weights
     }
-    | FixedNumberPost {
-        _n :: Int,
-        _weight :: Weight,
-        _allow_self_connections :: Bool
+  | OneToOne
+    { _weights :: Weights
     }
-    | FixedNumberPre {
-        _n :: Int,
-        _weight :: Weight,
-        _allow_self_connections :: Bool
-    }
-    | FromList {
-        _weights :: [(Int, Int, Weight)]
-    }
-    | FixedProbability {
-        _probability :: Probability
-    }
-    deriving (Eq, Show)
+  deriving (Eq, Show)
 
-makeLenses ''ProjectionType
-makePrisms ''ProjectionType
+makeLenses ''ConnectionType
+makePrisms ''ConnectionType
 
-instance FromJSON ProjectionType where
-    parseJSON = withObject "projection_type" $ \o -> do
-        kind :: String <- o .: "kind"
-        case kind of
-            "all_to_all" -> AllToAll <$> o .: "weight" <*> o .: "allow_self_connections"
-            "one_to_one" -> OneToOne <$> o .: "weight"
-            "fixed_number_pre" -> FixedNumberPre <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
-            "fixed_number_post" -> FixedNumberPost <$> o .: "n" <*> o .: "weight" <*> o .: "allow_self_connections"
-            "from_list" -> FromList <$> o .: "weights"
-            "fixed_probability" -> FixedProbability <$> o .: "probability"
+-- | Determines the effect of a synapse to be excitatory of inhibitory
+data SynapseEffect 
+  = Inhibitory
+  | Excitatory 
+  deriving (Eq, Show)
 
-instance ToJSON ProjectionType where
-    toJSON AllToAll{..} = object [
-            "kind" .= ("all_to_all" :: String),
-            "weight" .= _weight,
-            "allow_self_connections" .= _allow_self_connections
-        ]
-    toJSON OneToOne{..} = object [
-            "kind" .= ("one_to_one" :: String),
-            "weight" .= _weight
-        ]
-    toJSON FixedNumberPost{..} = object [
-            "kind" .= ("fixed_number_post" :: String),
-            "n" .= _n,
-            "weight" .= _weight,
-            "allow_self_connections" .= _allow_self_connections
-        ]
-    toJSON FixedNumberPre{..} = object [
-            "kind" .= ("fixed_number_pre" :: String),
-            "n"  .= _n,
-            "weight" .= _weight,
-            "allow_self_connections" .= _allow_self_connections
-        ]
-    toJSON FromList{..} = object [
-            "kind" .= ("from_list" :: String),
-            "weights" .= _weights
-        ]
-    toJSON FixedProbability{..} = object [
-            "kind" .= ("fixed_probability" :: String),
-            "probability" .= _probability
-        ]
+makeLenses '' SynapseEffect
+makePrisms '' SynapseEffect
 
-data SynapseEffect = Inhibitory | Excitatory deriving (Eq, Show)
+-- | Effect of projections that determines the method with which 'Node's connect
+data ProjectionEffect
+  = Static SynapseEffect ConnectionType
+-- | Dynamic .. TODO (Jens)
+  deriving (Eq, Show)
 
--- | The dynamics of a projection
-data ProjectionDynamics =
-    Static SynapseEffect
-    deriving (Eq, Show)
+makeLenses ''ProjectionEffect
+makePrisms ''ProjectionEffect
 
-instance ToJSON ProjectionDynamics where
-    toJSON (Static Excitatory) = object [
-            "kind" .= ("static" :: String),
-            "effect" .= ("excitatory" :: String)
-        ]
-    toJSON (Static Inhibitory) = object [
-            "kind" .= ("static" :: String),
-            "effect" .= ("inhibitory" :: String)
-        ]
-
-instance FromJSON ProjectionDynamics where
-    parseJSON = withObject "projection_target" $ \o -> do
-            kind :: String <- o .: "kind"
-            effect :: String <- o .: "effect"
-            case effect of
-                "excitatory" -> return (Static Excitatory)
-                "inhibitory" -> return (Static Inhibitory)
-
--- | An edge between two nodes describing the 'ProjectionType' and
--- 'ProjectionDynamics'
+-- | An edge between two neuron 'Node's with a given 'ProjectionEffect'
 data Edge =
       Projection {
-          _projectionType :: ProjectionType,
-          _projectionTarget :: ProjectionDynamics,
+          _effect :: ProjectionEffect,
           _input :: Node,
           _output :: Node
       } deriving (Eq, Show)
 
-instance ToJSON Edge where
-    toJSON Projection {..} = object [
-                "type" .= ("projection" :: String),
-                "projection_type" .= _projectionType,
-                "projection_target" .= _projectionTarget,
-                "input" .= _input,
-                "output" .= _output
-            ]
-
-instance FromJSON Edge where
-    parseJSON = withObject "edge" $ \o -> do
-        typ :: String <- o .: "type"
-        case typ of
-            "projection" ->
-                Projection <$>
-                    o .: "projection_type" <*>
-                    o .: "projection_target" <*>
-                    o .: "input" <*>
-                    o .: "output"
