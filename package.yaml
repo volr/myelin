@@ -2,7 +2,7 @@ name:                myelin
 version:             0.1.0.0
 github:              "volr/myelin"
 license:             BSD3
-author:              "Christian Pehle"
+author:              "Christian Pehle and Jens E. Pedersen"
 maintainer:          "christian.pehle@kip.uni-heidelberg.de"
 copyright:           "MIT"
 
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/cpehle/myelin#readme>
+description:         Please see the README on Github at <https://github.com/volr/myelin#readme>
 
 dependencies:
 - base >= 4.7 && < 5

@@ -28,7 +28,6 @@ spec = do
   describe "PyNN backend" $ do
     it "can return the reference for a node" $ do
       let tpe = if_cond_exp
-      let dict = unpack $ encode tpe
       let pop = Population 2 tpe "p0" 0 
       let expected = "node0"
       eval (pyNNNode pop) `shouldBe` Right expected 
@@ -53,10 +52,20 @@ spec = do
       let edge = Projection effect nodeIn nodeOut
       let expected = "proj0 = pynn.Projection(node0, node1, connector = pynn.AllToAllConnector())"
       exec (pyNNEdge edge) ^. pyNNProjections `shouldBe` (Map.singleton "proj0" expected)
-    it "can connect edges to learning nodes" $ do
+    it "can connect edges to learning nodes with constant weights" $ do
       let effect = Static Excitatory (AllToAll (Constant 1.0))
       let nodeIn = SpikeSourcePoisson 0.1 0 0
       let nodeOut = Population 2 if_cond_exp "p1" 1 
       let edge = Projection effect nodeIn nodeOut
-      let expected = ["proj0.set(weight=numpy.random.normal)", "node0.connect(node1)"]
+      let expected = ["proj0.set(weight=1.0)", "node0.connect(node1)"]
       exec (pyNNEdge edge) ^. declarations `shouldBe` expected 
+    it "can connect edges to learning nodes with random weights" $ do
+      let effect = Static Excitatory (AllToAll (GaussianRandom 1 2))
+      let nodeIn = SpikeSourcePoisson 0.1 0 0
+      let nodeOut = Population 2 if_cond_exp "p1" 1 
+      let edge = Projection effect nodeIn nodeOut
+      let expected = ["proj0.set(weight=numpy.random.normal(1.0, 2.0))", "node0.connect(node1)"]
+      exec (pyNNEdge edge) ^. declarations `shouldBe` expected 
+--    it "can translate a whole SNN model to a Python script" $ do
+--      let network = Network
+--      "" `shouldBe` ""
