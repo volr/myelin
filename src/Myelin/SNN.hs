@@ -71,6 +71,9 @@ data Network = Network {
     _outputs :: [Node]
 } deriving (Eq, Show)
 
+-- | Information about the population in the context of data injection/retrieval
+data PopulationVisibility = Input | Output | Hidden
+
 makeLenses ''Network
 
 type SNN a m = StateT Network m a
@@ -89,7 +92,7 @@ spikeSourceArray :: Monad m => [Float] -> SNN Node m
 spikeSourceArray spikeTimes = do
     id <- newId
     let spikeSource = SpikeSourceArray spikeTimes id
-    nodes <>= [spikeSource]
+    inputs <>= [spikeSource]
     return spikeSource
 
 -- | Creates a spike source from a poisson distribution 
@@ -100,7 +103,7 @@ spikeSourcePoisson :: Monad m =>
 spikeSourcePoisson rate start = do
     id <- newId
     let spikeSource = SpikeSourcePoisson rate start id
-    nodes <>= [spikeSource]
+    inputs <>= [spikeSource]
     return spikeSource
 
 -- | Creates a population of neurons, defined by 'Myelin.Neuron.NeuronType'
@@ -108,11 +111,15 @@ population :: Monad m =>
     String -- ^ label of the population (used for printing)
     -> Integer -- ^ size of the population
     -> NeuronType -- ^ type of neuron
+    -> PopulationVisibility -- ^ Input, output or hidden population
     -> SNN Node m
-population  label i typ = do
+population label i typ visibility = do
     l <- newId
     let pop = Population i typ label l 
-    nodes <>= [pop]
+    case visibility of
+      Input -> inputs <>= [pop]
+      Output -> outputs <>= [pop]
+      Hidden -> nodes <>= [pop]
     return pop
 
 -- | Projects two 'Node's together by projecting the first node to the second

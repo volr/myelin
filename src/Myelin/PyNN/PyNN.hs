@@ -62,7 +62,7 @@ translate' Network {..} = do
   _ <- mapM pyNNEdge _edges
   let inputList = "[" ++ (intercalate "," inputStrings) ++ "]"
   let outputList = "[" ++ (intercalate "," outputStrings) ++ "]"
-  let model = "Model(" ++ inputList ++ "," ++ outputList ++ ")"
+  let model = "pu.Model(" ++ inputList ++ "," ++ outputList ++ ")"
   declarations <>= [model]
   return ()
 

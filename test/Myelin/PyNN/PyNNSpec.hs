@@ -11,6 +11,7 @@ import qualified Data.Map.Strict as Map
 import Myelin.Model
 import Myelin.Neuron
 import Myelin.PyNN.PyNN
+import Myelin.SNN
 
 import Test.Hspec
 
@@ -66,6 +67,24 @@ spec = do
       let edge = Projection effect nodeIn nodeOut
       let expected = ["proj0.set(weight=numpy.random.normal(1.0, 2.0))", "node0.connect(node1)"]
       exec (pyNNEdge edge) ^. declarations `shouldBe` expected 
---    it "can translate a whole SNN model to a Python script" $ do
---      let network = Network
---      "" `shouldBe` ""
+    it "can translate SNN nodes and edges to a PyNN model" $ do
+      let input = Population 2 if_cond_exp "p1" 0
+      let hidden = Population 4 if_cond_exp "p2" 1
+      let output = Population 3 if_cond_exp "p3" 2
+      let effect = Static Excitatory (AllToAll (Constant 1))
+      let edges = [ Projection effect input hidden, Projection effect hidden output ]
+      let network = Network 0 [input] [hidden] edges [output]
+      let expectedDeclarations = ["proj0.set(weight=1.0)", "node0.connect(node1)", "proj1.set(weight=1.0)", "node1.connect(node2)", "pu.Model([node0],[node2])"]
+      let model = exec (translate' network)
+      model ^. declarations `shouldBe` expectedDeclarations
+      Map.size (model ^. pyNNNodes) `shouldBe` 3
+      Map.size (model ^. pyNNProjections) `shouldBe` 2
+   -- it "can translate a whole SNN model to a Python script" $ do
+   --   let input = Population 2 if_cond_exp "p3" 0
+   --   let hidden = Population 4 if_cond_exp "p2" 1
+   --   let output = Population 3 if_cond_exp "p3" 2
+   --   let effect = Static Excitatory (AllToAll (Constant 1))
+   --   let edges = [ Projection effect input hidden, Projection effect hidden output ]
+   --   let network = Network 0 [input] [hidden] edges [output]
+   --   exec (translate network) `shouldBe` expected
+    --it "can translate a complete SNN model with preample" $ do

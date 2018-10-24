@@ -19,9 +19,9 @@ net :: Monad m => SNN () m
 net = do
     input <- spikeSourceArray [1 .. 100]
 
-    a <- population "a" 5 $ if_current_exponential 
-    b <- population "b" 10 $ if_current_exponential 
-    c <- population "c" 5  $ if_current_exponential 
+    a <- population "a" 5 if_current_exponential Input
+    b <- population "b" 10 if_current_exponential Hidden
+    c <- population "c" 5 if_current_exponential Output
     
     projection (Static Excitatory (AllToAll (Constant 1.0))) input a
     projection (Static Excitatory (AllToAll (Constant 1.0))) a b
@@ -31,7 +31,7 @@ net = do
 net2 :: Monad m => SNN () m
 net2 = do
     spike_source <- spikeSourceArray [10 .. 51]
-    neurons <- population "neurons" 3 izhikevich
+    neurons <- population "neurons" 3 izhikevich Input
     projection (Static Excitatory (OneToOne (Constant 3.0))) spike_source neurons
     return ()
        
