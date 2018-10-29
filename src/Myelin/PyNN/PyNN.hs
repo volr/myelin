@@ -20,8 +20,8 @@ import Myelin.Model
 import Myelin.Neuron
 import Myelin.SNN
 
-data PyNNPreamble
-  = PyNNPreamble 
+data PyNNPreample
+  = PyNNPreample 
     { pyNNImport :: String
     , configuration :: String
     }
@@ -29,7 +29,7 @@ data PyNNPreamble
 
 data PyNNModel = PyNNModel 
   { _declarations :: [String]
-  , _pyNNNodes :: Map.Map String String -- ^ Nodes indexed by their Python variables
+  , _pyNNPopulations :: Map.Map String String -- ^ Nodes indexed by their Python variables
   , _pyNNProjections :: Map.Map String String -- ^ Projections between nodes indexed by their python variables
   }
   deriving (Eq, Show)
@@ -42,17 +42,17 @@ emptyPyNNModel = PyNNModel [] Map.empty Map.empty
 
 type PyNNState = ExceptT String (State PyNNModel)
 
-translate :: Network -> PyNNPreamble -> Either String String
-translate network (PyNNPreamble {..}) = 
+translate :: Network -> PyNNPreample -> Either String String
+translate network preample = 
   let (result, (PyNNModel {..})) = runState (runExceptT $ translate' network) emptyPyNNModel
   in  case result of
         Left translationError -> Left $ "Failed to translate SNN model to Python: " ++ translationError
         Right _ ->
-          let nodeLines = unlines $ Map.elems $ _pyNNNodes
+          let populationLines = unlines $ Map.elems $ _pyNNPopulations
               projectionLines = unlines $ Map.elems $ _pyNNProjections
               declarationLines = unlines $ _declarations
-              preambleLines = pyNNImport ++ "\n" ++ configuration
-          in Right $ unlines [nodeLines, projectionLines, declarationLines, preambleLines]
+              preampleLines = pyNNPreample preample 
+          in Right $ concat [preampleLines, populationLines, projectionLines, declarationLines]
  
 translate' :: Network -> PyNNState ()
 translate' Network {..} = do
@@ -62,54 +62,58 @@ translate' Network {..} = do
   _ <- mapM pyNNEdge _edges
   let inputList = "[" ++ (intercalate "," inputStrings) ++ "]"
   let outputList = "[" ++ (intercalate "," outputStrings) ++ "]"
-  let model = "pu.Model(" ++ inputList ++ "," ++ outputList ++ ")"
+  let model = "model = pm.Model(" ++ inputList ++ "," ++ outputList ++ ")"
   declarations <>= [model]
   return ()
 
 -- | The Python PyNN preamble for import statements
-pyNNPreamble :: PyNNPreamble -> String
-pyNNPreamble PyNNPreamble {..} = [i|
-import addict
-import numpy
+pyNNPreample :: PyNNPreample -> String
+pyNNPreample PyNNPreample {..} = [i|import numpy
 import #{pyNNImport} as pynn
-
 import pynn_utils as pu
+import pynn_model as pm
 
 #{configuration}
+
 |]
 
 pyNNNode :: Node -> PyNNState String
 pyNNNode node = case node of
   Population {..} -> do
-    pop <- pyNNPopulation _neuronType
-    nodeVariable _id $ pyNNLearningNode pop
+    pop <- pyNNPopulation _neuronType _numNeurons _id
+    pyNNLearningNode pop _id
   _ -> throwError $ "Unknown node type " ++ (show node)
 
 --   SpikeSourceArray { .. } -> 
 --   SpikeSourcePoisson { .. } -> 
 
 -- | Converts the code of a regular PyNN node into a learning node
-pyNNLearningNode :: String -> String
-pyNNLearningNode pop = "pu.LearningNode(" ++ pop ++ ")"
+pyNNLearningNode :: String -> Int -> PyNNState String
+pyNNLearningNode pop id = do
+    let nodeName = nodeReference id
+    let code = "pm.LearningNode(" ++ pop ++ ")"
+    declarations <>= [pythonVariable nodeName code]
+    return nodeName
 
 -- | Returns the code for a PyNN population
-pyNNPopulation :: NeuronType -> PyNNState String
-pyNNPopulation tpe = 
+pyNNPopulation :: NeuronType -> Integer -> Int -> PyNNState String
+pyNNPopulation tpe numNeurons id = 
   let params = BS.unpack $ encode tpe
   in  case tpe of
-        IFCondExp { .. } -> return $ "pynn.IF_cond_exp(" ++ params ++ ")"
+        IFCondExp { .. } -> populationVariable id $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_Cond_Exp(" ++ params ++ "))"
         _ -> throwError $ "Unknown neuron type " ++ (show tpe)
 
 -- | Creates and stores an Edge as a PyNN projection
 pyNNEdge :: Edge -> PyNNState String
 pyNNEdge Projection { .. } = do
   PyNNProjection {..} <- pyNNProjection _effect
---  let dynamics = pyNNDynamics projectionDynamics
+  let popRef1 = populationReference $ _input ^. id
+  let popRef2 = populationReference $ _output ^. id
+  let code = "pynn.Projection(" ++ popRef1 ++", " ++ popRef2 ++ ", connector = " ++ connector ++ ")"
+  edgeRef <- projectionVariable code
   let nodeRef1 = nodeReference $ _input ^. id
   let nodeRef2 = nodeReference $ _output ^. id
-  let code = "pynn.Projection(" ++ nodeRef1 ++", " ++ nodeRef2 ++ ", connector = " ++ connector ++ ")"
-  edgeRef <- projectionVariable code
-  declarations <>= [edgeRef ++ ".set(weight=" ++ weight ++ ")", nodeRef1 ++ ".connect(" ++ nodeRef2 ++ ")"]
+  declarations <>= [edgeRef ++ ".set(weight=" ++ weight ++ ")", nodeRef1 ++ ".connect_to(" ++ nodeRef2 ++ ")"]
   return edgeRef
 
 data PyNNProjection = PyNNProjection 
@@ -130,17 +134,17 @@ pyNNWeight :: Weights -> PyNNState String
 pyNNWeight (Constant n) = return (show n)
 pyNNWeight (GaussianRandom mean scale) = return [i|numpy.random.normal(#{mean}, #{scale})|]
 
--- pyNNDynamics :: ProjectionDynamics -> String
--- pyNNDynamics Static Excitatory = 
-
 nodeReference :: Int -> String
-nodeReference nodeId = "node" ++ (show nodeId)
+nodeReference id = "node" ++ (show id)
 
-nodeVariable :: Int -> String -> PyNNState String
-nodeVariable nodeId code = do
-  let name = "node" ++ (show nodeId)
+populationReference :: Int -> String
+populationReference nodeId = "p" ++ (show nodeId)
+
+populationVariable :: Int -> String -> PyNNState String
+populationVariable popId code = do
+  let name = "p" ++ (show popId)
   let variable = pythonVariable name code
-  pyNNNodes %= (Map.insert name variable)
+  pyNNPopulations %= (Map.insert name variable)
   return name
 
 projectionVariable :: String -> PyNNState String
