@@ -42,6 +42,7 @@ emptyPyNNModel = PyNNModel [] Map.empty Map.empty
 
 type PyNNState = ExceptT String (State PyNNModel)
 
+-- | Attempts to translate a network into a Python code string
 translate :: Network -> PyNNPreample -> Either String String
 translate network preample = 
   let (result, (PyNNModel {..})) = runState (runExceptT $ translate' network) emptyPyNNModel
@@ -64,7 +65,6 @@ translate' Network {..} = do
   let outputList = "[" ++ (intercalate "," outputStrings) ++ "]"
   let model = "model = pm.Model(" ++ inputList ++ "," ++ outputList ++ ")"
   declarations <>= [model]
-  return ()
 
 -- | The Python PyNN preamble for import statements
 pyNNPreample :: PyNNPreample -> String
@@ -85,7 +85,7 @@ pyNNNode node = case node of
   _ -> throwError $ "Unknown node type " ++ (show node)
 
 --   SpikeSourceArray { .. } -> 
---   SpikeSourcePoisson { .. } -> 
+--  SpikeSourcePoisson { .. } -> do 
 
 -- | Converts the code of a regular PyNN node into a learning node
 pyNNLearningNode :: String -> Int -> PyNNState String
@@ -95,13 +95,21 @@ pyNNLearningNode pop id = do
     declarations <>= [pythonVariable nodeName code]
     return nodeName
 
--- | Returns the code for a PyNN population
+-- | Statefully encodes a pyNNPopulation, returning the variable name for that
+--   population
 pyNNPopulation :: NeuronType -> Integer -> Int -> PyNNState String
 pyNNPopulation tpe numNeurons id = 
+  case pyNNPopulationString tpe numNeurons id of
+    Right codeString -> populationVariable id codeString
+    Left errorString -> throwError errorString 
+ 
+-- | Encodes a PyNN population as a string without state
+pyNNPopulationString :: NeuronType -> Integer -> Int -> Either String String
+pyNNPopulationString tpe numNeurons id =
   let params = BS.unpack $ encode tpe
   in  case tpe of
-        IFCondExp { .. } -> populationVariable id $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_Cond_Exp(" ++ params ++ "))"
-        _ -> throwError $ "Unknown neuron type " ++ (show tpe)
+        IFCondExp { .. } -> Right $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_Cond_Exp(" ++ params ++ "))"
+        _ -> Left $ "Unknown neuron type " ++ (show tpe)
 
 -- | Creates and stores an Edge as a PyNN projection
 pyNNEdge :: Edge -> PyNNState String

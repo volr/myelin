@@ -6,6 +6,7 @@ import Control.Monad.State.Lazy
 import Control.Monad.Trans.Except
 import Data.Aeson
 import Data.ByteString.Lazy.Char8
+import Data.Either
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
 
@@ -70,6 +71,28 @@ spec = do
       let edge = Projection effect nodeIn nodeOut
       let expected = ["proj0.set(weight=numpy.random.normal(1.0, 2.0))", "node0.connect_to(node1)"]
       exec (pyNNEdge edge) ^. declarations `shouldBe` expected 
+    it "can correctly translate two nodes into a dictionary" $ do
+      let node1 = Population 1 if_cond_exp "p0" 0
+      let node2 = Population 2 if_cond_exp "p1" 1 
+      let network = Network 0 [node1] [node2] [] []
+      let code1 = "p0 = " ++ (fromRight "" (pyNNPopulationString if_cond_exp 1 0))
+      let code2 = "p1 = " ++ (fromRight "" (pyNNPopulationString if_cond_exp 2 1))
+      let expected = Map.fromList [("p0", code1), ("p1", code2)]
+      exec (translate' network) ^. pyNNPopulations `shouldBe` expected
+    it "can create a model with two inputs and two outputs" $ do
+      let effect1 = Static Excitatory (AllToAll (GaussianRandom 1 2))
+      let effect2 = Static Excitatory (AllToAll (Constant 1.0))
+      let nodeIn1 = Population 1 if_cond_exp "p0" 0
+      let nodeIn2 = Population 2 if_cond_exp "p1" 1
+      let nodeOut1 = Population 3 if_cond_exp "p2" 2
+      let nodeOut2 = Population 4 if_cond_exp "p3" 3
+      let edge1 = Projection effect1 nodeIn1 nodeOut1
+      let edge2 = Projection effect2 nodeIn2 nodeOut2
+      let learningNodes = Prelude.map (\x -> [i|node#{x} = pm.LearningNode(p#{x})|]) [0..3]
+      let expectedDeclarations = learningNodes ++ ["proj0.set(weight=numpy.random.normal(1.0, 2.0))", "node0.connect_to(node2)", "proj1.set(weight=1.0)", "node1.connect_to(node3)", "model = pm.Model([node0,node1],[node2,node3])"]
+      let network = Network 0 [nodeIn1, nodeIn2] [] [edge1, edge2] [nodeOut1, nodeOut2]
+      let model = exec (translate' network)
+      model ^. declarations `shouldBe` expectedDeclarations
     it "can translate SNN nodes and edges to a PyNN model" $ do
       let input = Population 2 if_cond_exp "p1" 0
       let hidden = Population 4 if_cond_exp "p2" 1

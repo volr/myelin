@@ -5,28 +5,15 @@ import spikeprop
 class Model(object):
     """A model of a supervised neural network experiment"""
 
-    def __init__(self, pynn, configuration):
-        self.pynn = pynn
-        self.pynn.setup()
-        
-        self.pynn_nodes = {}
-        self.learning_nodes = {}
-        self.edges = []
-
-        for node_config in configuration.nodes:
-            node = pynn_utils.create_node(pynn, node_config)
-            self.pynn_nodes[node_config.id] = node
-            self.learning_nodes[node_config.id] = LearningNode(node)
-        for proj in configuration.edges:
-            edge = pynn_utils.create_edge(pynn, self.pynn_nodes, proj)
-            self.edges.append(edge)
-            self.learning_nodes[proj.input.id].connect(self.learning_nodes[proj.output.id], edge)
+    def __init__(self, inputs, outputs):
+        # Ensure that pynn is set
+        assert pynn != None, "Please assign PyNN backend"
 
         # Only allow one input and output
-        assert len(configuration.outputs) == 1
-        assert len(configuration.inputs) == 1
-        self.output_node = self.learning_nodes[configuration.outputs[0].id]
-        self.output_size = configuration.outputs[0].num_neurons
+        assert len(outputs) == 1, "Only one input supported for now"
+        assert len(inputs) == 1, "Only one output supported for now"
+        self.output_node = outputs[0]
+        self.output_size = inputs[0] 
 
         # Create input Poisson sources
         self.input_node = self.learning_nodes[configuration.inputs[0].id]
