@@ -1,17 +1,15 @@
-sudo: required
-language: generic
+sudo: false
+language: c
 cache:
   directories:
-    - $HOME/.ghc
-    - $HOME/.cabal
-    - $HOME/.stack
-    - $TRAVIS_BUILD_DIR/.stack-work
-stages:
-  - prepare cache
-  - test
-jobs:
-  include:
-  - stage: prepare cache
-    script: true
-  - stage: test
-    script: ./ci/travis_test_myelin.sh
+  - $HOME/.stack
+  - $HOME/.local
+  - $HOME/.stack-work-cache
+  apt: true
+before_install:
+- if [ ! -e ~/.local/bin/stack ]; then mkdir -p ~/.local/bin; travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'; fi
+- echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo
+    '?')]"
+- stack +RTS -N2 -RTS --version
+script:
+- travis_wait stack --no-terminal --skip-ghc-check test
