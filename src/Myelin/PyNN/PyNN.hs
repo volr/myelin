@@ -98,7 +98,7 @@ pyNNPopulationString :: NeuronType -> Integer -> Int -> Either String String
 pyNNPopulationString tpe numNeurons id =
   let params = BS.unpack $ encode tpe
   in  case tpe of
-        IFCondExp { .. } -> Right $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_Cond_Exp(**" ++ params ++ "))"
+        IFCondExp { .. } -> Right $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_cond_exp(**" ++ params ++ "))"
         _ -> Left $ "Unknown neuron type " ++ (show tpe)
 
 -- | Creates and stores an Edge as a PyNN projection
