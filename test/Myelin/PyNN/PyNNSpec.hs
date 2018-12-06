@@ -38,7 +38,7 @@ spec = do
       let tpe = if_cond_exp
       let dict = unpack $ encode tpe
       let pop = Population 2 tpe "p0" 0
-      let expectedPopulation = "p0 = pynn.Population(2, pynn.IF_Cond_Exp(**" ++ dict ++ "))"
+      let expectedPopulation = "p0 = pynn.Population(2, pynn.IF_cond_exp(**" ++ dict ++ "))"
       let actualModel = exec (pyNNNode pop) 
       actualModel ^. populations `shouldBe` Map.singleton "p0" expectedPopulation
     it "can return the reference for a layer" $ do
@@ -111,9 +111,9 @@ import volrpynn as v
 
 # some config
 
-p0 = pynn.Population(2, pynn.IF_Cond_Exp(**#{dict}))
-p1 = pynn.Population(4, pynn.IF_Cond_Exp(**#{dict}))
-p2 = pynn.Population(3, pynn.IF_Cond_Exp(**#{dict}))
+p0 = pynn.Population(2, pynn.IF_cond_exp(**#{dict}))
+p1 = pynn.Population(4, pynn.IF_cond_exp(**#{dict}))
+p2 = pynn.Population(3, pynn.IF_cond_exp(**#{dict}))
 layer0 = v.Dense(pynn, p0, p1, weights = 1.0)
 layer1 = v.Dense(pynn, p1, p2, weights = numpy.random.normal(2.0, 1.0))
 model = v.Model(pynn, layer0, layer1)
