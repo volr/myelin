@@ -5,35 +5,42 @@ import spikeprop
 class Model(object):
     """A model of a supervised neural network experiment"""
 
-    def __init__(self, inputs, outputs):
+    def __init__(self, input_node, output_node, pynn_nodes, pynn):
         # Ensure that pynn is set
         assert pynn != None, "Please assign PyNN backend"
+        
+        # Assign nodes
+        self.input_node = input_node
+        self.output_node = output_node
+        self.pynn_nodes = pynn_nodes
 
-        # Only allow one input and output
-        assert len(outputs) == 1, "Only one input supported for now"
-        assert len(inputs) == 1, "Only one output supported for now"
-        self.output_node = outputs[0]
-        self.output_size = inputs[0] 
-
-        # Create input Poisson sources
-        self.input_node = self.learning_nodes[configuration.inputs[0].id]
-        self.input_size = configuration.inputs[0].num_neurons
-
-        self.input_source = pynn.Population(self.input_size,
-                pynn.SpikeSourcePoisson(rate = 1.0), label = 'input')
+        # Create input Poisson source
+        self.input_populations = []
+        for _ in range(self.input_node.size):
+            self.input_populations.append(pynn.Population(self.input_node.size,
+                pynn.SpikeSourcePoisson(rate = 1.0), label = 'input'))
+        self.input_source = pynn.Assembly(*self.input_populations)
         self.input_projection = pynn.Projection(self.input_source, self.input_node.node,
                 pynn.OneToOneConnector(), pynn.StaticSynapse(weight = 1.0))
-        self.pynn_nodes['input'] = self.input_source
 
     def set_input(self, poisson_rates):
-        assert len(poisson_rates) == self.input_size
+        assert len(poisson_rates) == len(self.input_populations),\
+                "Input dimension ({}) must match input node size ({})"\
+                  .format(len(poisson_rates), len(self.input_populations))
+        for index in range(len(poisson_rates)):
+            self.input_populations[index].set(rate = poisson_rates[index])
 
-    def train(self, data):
-        pass
+    def train(self, xs, ys):
+        """Trains the model on a sequence of inputs and expected outputs.
+        The input data is expected to describe Poisson spike rates per input neuron
+        and the output is expected to describe anticipated output spikes."""
+        self.set_input(xs)
+        
     
     def predict(self, data, time):
         """Predicts an output by simulating the model with the given input
         Poisson rates"""
+        self.size = node.size
         spikes = []
         for rates in data:
             assert self.input_source.size == len(rates)
@@ -65,8 +72,9 @@ class LearningNode(object):
         self.edges_out = []
         self.node = node 
         self.spikes = None
+        self.size = node.size
 
-    def connect(self, to, edge):
+    def connect_to(self, to, edge):
         self.edges_out.append(edge)
         to.edges_in.append(edge)
 

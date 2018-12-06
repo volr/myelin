@@ -1,6 +1,10 @@
 import pyNN
 import addict
 
+def clean_parameters(parameters):
+    del parameters['type']
+    return parameters
+
 def create_edge(pynn, nodes, edge):
     """Create a pyNN edge.
 
