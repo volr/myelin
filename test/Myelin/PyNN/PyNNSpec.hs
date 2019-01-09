@@ -45,22 +45,38 @@ spec = do
       let effect = Static Excitatory (AllToAll (Constant 1.0))
       let nodeIn = SpikeSourcePoisson 0.1 0 0
       let nodeOut = Population 2 if_cond_exp "p1" 1
-      let edge = Projection effect nodeIn nodeOut
+      let edge = DenseProjection effect nodeIn nodeOut
       let expected = "layer0"
       eval (pyNNEdge edge) `shouldBe` Right expected  
-    it "can translate an edge to Python" $ do
+    it "can translate a dense edge to Python" $ do
       let effect = Static Excitatory (AllToAll (Constant 1.0))
       let nodeIn = SpikeSourcePoisson 0.1 0 0
       let nodeOut = Population 2 if_cond_exp "p1" 1 
-      let edge = Projection effect nodeIn nodeOut
-      let expected = "layer0 = v.Dense(pynn, p0, p1, weights = 1.0)"
+      let edge = DenseProjection effect nodeIn nodeOut
+      let expected = "layer0 = v.Dense(p0, p1, weights = 1.0)"
+      exec (pyNNEdge edge) ^. layers `shouldBe` (Map.singleton "layer0" expected)
+    it "can translate a replicate edge to Python" $ do
+      let effect = Static Excitatory (AllToAll (Constant 1.0))
+      let nodeIn = SpikeSourcePoisson 0.1 0 0
+      let nodeOut1 = Population 2 if_cond_exp "p1" 1 
+      let nodeOut2 = Population 2 if_cond_exp "p2" 2
+      let edge = ReplicateProjection effect nodeIn (nodeOut1, nodeOut2)
+      let expected = "layer0 = v.Replicate(p0, (p1, p2), weights = (1.0, 1.0))"
+      exec (pyNNEdge edge) ^. layers `shouldBe` (Map.singleton "layer0" expected)
+    it "can translate a merge edge to Python" $ do
+      let effect = Static Excitatory (AllToAll (Constant 1.0))
+      let nodeIn1 = Population 2 if_cond_exp "p0" 0 
+      let nodeIn2 = Population 2 if_cond_exp "p1" 1
+      let nodeOut = Population 4 if_cond_exp "p2" 2
+      let edge = MergeProjection effect (nodeIn1, nodeIn2) nodeOut
+      let expected = "layer0 = v.Merge((p0, p1), p2)"
       exec (pyNNEdge edge) ^. layers `shouldBe` (Map.singleton "layer0" expected)
     it "can connect edges to learning nodes with constant weights" $ do
       let effect = Static Excitatory (AllToAll (Constant 12.0))
       let nodeIn = SpikeSourcePoisson 0.1 0 0
       let nodeOut = Population 2 if_cond_exp "p1" 1 
-      let edge = Projection effect nodeIn nodeOut
-      let expected = "layer0 = v.Dense(pynn, p0, p1, weights = 12.0)"
+      let edge = DenseProjection effect nodeIn nodeOut
+      let expected = "layer0 = v.Dense(p0, p1, weights = 12.0)"
       exec (pyNNEdge edge) ^. layers `shouldBe` Map.singleton "layer0" expected 
     it "can correctly translate two nodes into a dictionary" $ do
       let node1 = Population 1 if_cond_exp "p0" 0
@@ -77,9 +93,9 @@ spec = do
       let nodeIn2 = Population 2 if_cond_exp "p1" 1
       let nodeOut1 = Population 3 if_cond_exp "p2" 2
       let nodeOut2 = Population 4 if_cond_exp "p3" 3
-      let edge1 = Projection effect1 nodeIn1 nodeOut1
-      let edge2 = Projection effect2 nodeIn2 nodeOut2
-      let expectedDeclarations = ["model = v.Model(pynn, layer0, layer1)"]
+      let edge1 = DenseProjection effect1 nodeIn1 nodeOut1
+      let edge2 = DenseProjection effect2 nodeIn2 nodeOut2
+      let expectedDeclarations = ["model = v.Model(layer0, layer1)"]
       let network = Network 0 [nodeIn1, nodeIn2] [] [edge1, edge2] [nodeOut1, nodeOut2]
       let model = exec (translate' network)
       model ^. declarations `shouldBe` expectedDeclarations
@@ -88,34 +104,37 @@ spec = do
       let hidden = Population 4 if_cond_exp "p2" 1
       let output = Population 3 if_cond_exp "p3" 2
       let effect = Static Excitatory (AllToAll (Constant 1))
-      let edges = [ Projection effect input hidden, Projection effect hidden output ]
+      let edges = [ DenseProjection effect input hidden, DenseProjection effect hidden output ]
       let network = Network 0 [input] [hidden] edges [output]
-      let expectedDeclarations = ["model = v.Model(pynn, layer0, layer1)"]
+      let expectedDeclarations = ["model = v.Model(layer0, layer1)"]
       let model = exec (translate' network)
       model ^. declarations `shouldBe` expectedDeclarations
       Map.size (model ^. populations) `shouldBe` 3
       Map.size (model ^. layers) `shouldBe` 2
-    it "can translate a whole SNN model to a Python script" $ do
+    it "can translate an entire SNN model to a Python script" $ do
       let input = Population 2 if_cond_exp "p0" 0
       let hidden = Population 4 if_cond_exp "p1" 1
       let output = Population 3 if_cond_exp "p2" 2
       let dict = unpack $ encode if_cond_exp
       let effect1 = Static Excitatory (AllToAll (Constant 1))
       let effect2 = Static Excitatory (AllToAll (GaussianRandom 2 1))
-      let edges = [ Projection effect1 input hidden, Projection effect2 hidden output ]
+      let edges = [ DenseProjection effect1 input hidden, DenseProjection effect2 hidden output ]
       let network = Network 0 [input] [hidden] edges [output]
-      let preample = PyNNPreample "pyNN.nest" "# some config"
-      let code = [i|import numpy
-import pyNN.nest as pynn
-import volrpynn as v
+      let task = Task (Nest 0 0) network 50
+      let preample = PyNNPreample "# some config"
+      let code = [i|import numpy as np
+import volrpynn.nest as v
 
 # some config
 
 p0 = pynn.Population(2, pynn.IF_cond_exp(**#{dict}))
 p1 = pynn.Population(4, pynn.IF_cond_exp(**#{dict}))
 p2 = pynn.Population(3, pynn.IF_cond_exp(**#{dict}))
-layer0 = v.Dense(pynn, p0, p1, weights = 1.0)
-layer1 = v.Dense(pynn, p1, p2, weights = numpy.random.normal(2.0, 1.0))
-model = v.Model(pynn, layer0, layer1)
+layer0 = v.Dense(p0, p1, weights = 1.0)
+layer1 = v.Dense(p1, p2, weights = numpy.random.normal(2.0, 1.0, (4, 3)))
+model = v.Model(layer0, layer1)
+
+optimiser = v.GradientDescentOptimiser(0.1, simulation_time = 50.0)
+v.Main(model).train(optimiser)
 |]
-      translate network preample `shouldBe` Right code
+      translate task preample `shouldBe` Right code

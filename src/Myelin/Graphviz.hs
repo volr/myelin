@@ -22,7 +22,7 @@ import Myelin.Neuron
 toGraph :: Network -> DotGraph String
 toGraph b = digraph (Str "Network") $ do
     nodes <- forM (_nodes b) $ node' . nodeLabel
-    forM_ (_edges b) $ \Projection{..} -> (nodeLabel _input) --> (nodeLabel _output)
+    forM_ (_edges b) $ \DenseProjection{..} -> (nodeLabel _input) --> (nodeLabel _output)
     where nodeLabel x = case x of
                             Population{..} -> "population:id:" ++ show _id ++ ":" ++ _label
                             SpikeSourceArray{..} -> "spike_source_array:" ++ show _id

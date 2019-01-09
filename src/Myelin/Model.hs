@@ -96,11 +96,22 @@ data ProjectionEffect
 makeLenses ''ProjectionEffect
 makePrisms ''ProjectionEffect
 
--- | An edge between two neuron 'Node's with a given 'ProjectionEffect'
-data Edge =
-      Projection {
-          _effect :: ProjectionEffect,
-          _input :: Node,
-          _output :: Node
-      } deriving (Eq, Show)
+-- | An edge between two units in the network with a given 'ProjectionEffect'
+data Edge
+  = DenseProjection
+    { _effect :: ProjectionEffect
+    , _input :: Node
+    , _output :: Node
+    }
+  | MergeProjection
+    { _effect :: ProjectionEffect
+    , _inputs :: (Node, Node)
+    , _output :: Node
+    }
+  | ReplicateProjection
+    { _effect :: ProjectionEffect
+    , _input :: Node
+    , _outputs :: (Node, Node)
+    }
+  deriving (Eq, Show)
 

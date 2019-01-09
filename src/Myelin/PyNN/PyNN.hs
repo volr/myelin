@@ -22,8 +22,7 @@ import Myelin.SNN
 
 data PyNNPreample
   = PyNNPreample 
-    { pyNNImport :: String
-    , configuration :: String
+    { configuration :: String
     }
     deriving (Eq, Show)
 
@@ -43,8 +42,8 @@ emptyPyNNModel = PyNNModel [] Map.empty Map.empty
 type PyNNState = ExceptT String (State PyNNModel)
 
 -- | Attempts to translate a network into a Python code string
-translate :: Network -> PyNNPreample -> Either String String
-translate network preample = 
+translate :: Task -> PyNNPreample -> Either String String
+translate (Task target network simulationTime) preample = 
   let (result, (PyNNModel {..})) = runState (runExceptT $ translate' network) emptyPyNNModel
   in  case result of
         Left translationError -> Left $ "Failed to translate SNN model to Python: " ++ translationError
@@ -52,8 +51,12 @@ translate network preample =
           let populationLines = unlines $ Map.elems _populations
               layerLines = unlines $ Map.elems _layers
               declarationLines = unlines $ _declarations
-              preampleLines = pyNNPreample preample 
-          in Right $ concat [preampleLines, populationLines, layerLines, declarationLines]
+              preampleLines = pyNNPreample target preample 
+          in Right $ concat [preampleLines, populationLines, layerLines, declarationLines, training]
+    where training = [i|
+optimiser = v.GradientDescentOptimiser(0.1, simulation_time = #{simulationTime})
+v.Main(model).train(optimiser)
+|]
  
 translate' :: Network -> PyNNState ()
 translate' Network {..} = do
@@ -63,14 +66,17 @@ translate' Network {..} = do
   _ <- mapM pyNNEdge _edges
   layers <- fmap _layers get
   let layersString = intercalate ", " $ Map.keys layers
-  let model = "model = v.Model(pynn, " ++ layersString ++ ")"
+  let model = "model = v.Model(" ++ layersString ++ ")"
   declarations <>= [model]
 
 -- | The Python PyNN preamble for import statements
-pyNNPreample :: PyNNPreample -> String
-pyNNPreample PyNNPreample {..} = [i|import numpy
-import #{pyNNImport} as pynn
-import volrpynn as v
+pyNNPreample :: ExecutionTarget -> PyNNPreample -> String
+pyNNPreample target (PyNNPreample {..}) = let 
+ pyNNTarget = 
+   case target of
+      Nest { .. } -> "nest"
+ in [i|import numpy as np
+import volrpynn.#{pyNNTarget} as v
 
 #{configuration}
 
@@ -103,29 +109,57 @@ pyNNPopulationString tpe numNeurons id =
 
 -- | Creates and stores an Edge as a PyNN projection
 pyNNEdge :: Edge -> PyNNState String
-pyNNEdge Projection { .. } = do
-  PyNNProjection {..} <- pyNNProjection _effect
-  let popRef1 = populationReference $ _input ^. id
-  let popRef2 = populationReference $ _output ^. id
-  let code = "v." ++ layerType ++ "(pynn, " ++ popRef1 ++", " ++ popRef2 ++ ", weights = " ++ weight ++")"
+pyNNEdge projection = do
+  (PyNNProjection {..}, inputs, outputs) <- pyNNProjection projection
+  let popRef1 = concatReferences inputs
+  let popRef2 = concatReferences outputs
+  let code = "v." ++ layerType ++ "(" ++ popRef1 ++", " ++ popRef2 ++ (weightString weight) ++ ")"
   layerVariable code
+    where 
+      concatReferences :: [Node] -> String
+      concatReferences nodes = 
+        case length nodes of
+          1 -> populationReference (nodes !! 0 ^. id)
+          _ -> let strings = intercalate ", " $ map populationReference $ map (\node -> node ^. id) nodes
+               in "(" ++ strings ++ ")"
+      weightString (Just weight) =  ", weights = " ++ weight
+      weightString Nothing = ""
 
 data PyNNProjection = PyNNProjection 
   { layerType :: String
-  , weight :: String
+  , weight :: Maybe String
   }
 
 -- | Create a PyNN Connector definition
-pyNNProjection :: ProjectionEffect -> PyNNState PyNNProjection
-pyNNProjection (Static Excitatory (AllToAll weight)) = do
-  w <- pyNNWeight weight
-  return $ PyNNProjection  "Dense" w
+pyNNProjection :: Edge-> PyNNState (PyNNProjection, [Node], [Node])
+pyNNProjection (DenseProjection (Static Excitatory (AllToAll weight)) nodeIn nodeOut) = do
+  w <- pyNNWeight weight (_numNeurons nodeIn) (_numNeurons nodeOut)
+  return $ (PyNNProjection "Dense" (Just w), [nodeIn], [nodeOut])
+pyNNProjection (MergeProjection _ (nodeIn1, nodeIn2) nodeOut) = do
+  let input1Size = (_numNeurons nodeIn1) 
+  let input2Size = (_numNeurons nodeIn2) 
+  outputSize <- if (input1Size == input2Size) 
+    then return $ input1Size * 2
+    else throwError $ "Merge connections require two inputs of the same size, found " ++ (show (input1Size, input2Size))
+  return $ (PyNNProjection "Merge" Nothing, [nodeIn1, nodeIn2], [nodeOut])
+pyNNProjection (ReplicateProjection (Static Excitatory (AllToAll weight)) nodeIn (nodeOut1, nodeOut2)) = do
+  let inputSize = _numNeurons nodeIn
+  let output1Size = _numNeurons nodeOut1
+  let output2Size = _numNeurons nodeOut2
+  outputSize <- if (output1Size == output2Size)
+    then return $ output1Size
+    else throwError $ "Replicaten connections require two outputs of the same size, found " ++ (show (output1Size, output2Size))
+  w1 <- pyNNWeight weight inputSize output1Size
+  w2 <- pyNNWeight weight inputSize output1Size
+  let w = [i|(#{w1}, #{w2})|]
+  return $ (PyNNProjection "Replicate" (Just w), [nodeIn], [nodeOut1, nodeOut2])
 pyNNProjection p = throwError $ "Unknown projection effect" ++ (show p)
 
 -- | Converts a weight to a PyNN weight setting
-pyNNWeight :: Weights -> PyNNState String
-pyNNWeight (Constant n) = return (show n)
-pyNNWeight (GaussianRandom mean scale) = return [i|numpy.random.normal(#{mean}, #{scale})|]
+pyNNWeight :: Weights -> Integer -> Integer -> PyNNState String
+pyNNWeight (Constant n) _ _ = return (show n)
+pyNNWeight (GaussianRandom mean scale) fromSize toSize 
+  = return [i|numpy.random.normal(#{mean}, #{scale}, (#{fromSize}, #{toSize}))|]
 
 populationReference :: Int -> String
 populationReference nodeId = "p" ++ (show nodeId)
