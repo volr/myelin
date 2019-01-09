@@ -162,7 +162,7 @@ pyNNProjection p = throwError $ "Unknown projection effect" ++ (show p)
 pyNNWeight :: Weights -> Integer -> Integer -> PyNNState String
 pyNNWeight (Constant n) _ _ = return (show n)
 pyNNWeight (GaussianRandom mean scale) fromSize toSize 
-  = return [i|numpy.random.normal(#{mean}, #{scale}, (#{fromSize}, #{toSize}))|]
+  = return [i|np.random.normal(#{mean}, #{scale}, (#{fromSize}, #{toSize}))|]
 
 populationReference :: Int -> String
 populationReference nodeId = "p" ++ (show nodeId)
