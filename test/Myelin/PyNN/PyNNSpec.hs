@@ -124,6 +124,7 @@ spec = do
       let preample = PyNNPreample "# some config"
       let code = [i|import numpy as np
 import volrpynn.nest as v
+import pyNN.nest as pynn
 
 # some config
 

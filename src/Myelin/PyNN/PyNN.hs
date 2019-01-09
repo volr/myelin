@@ -77,6 +77,7 @@ pyNNPreample target (PyNNPreample {..}) = let
       Nest { .. } -> "nest"
  in [i|import numpy as np
 import volrpynn.#{pyNNTarget} as v
+import pyNN.#{pyNNTarget} as pynn
 
 #{configuration}
 
