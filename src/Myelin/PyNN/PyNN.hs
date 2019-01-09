@@ -138,9 +138,7 @@ pyNNProjection (DenseProjection (Static Excitatory (AllToAll weight)) nodeIn nod
 pyNNProjection (MergeProjection _ (nodeIn1, nodeIn2) nodeOut) = do
   let input1Size = (_numNeurons nodeIn1) 
   let input2Size = (_numNeurons nodeIn2) 
-  outputSize <- if (input1Size == input2Size) 
-    then return $ input1Size * 2
-    else throwError $ "Merge connections require two inputs of the same size, found " ++ (show (input1Size, input2Size))
+  return $ input1Size + input2Size
   return $ (PyNNProjection "Merge" Nothing, [nodeIn1, nodeIn2], [nodeOut])
 pyNNProjection (ReplicateProjection (Static Excitatory (AllToAll weight)) nodeIn (nodeOut1, nodeOut2)) = do
   let inputSize = _numNeurons nodeIn
