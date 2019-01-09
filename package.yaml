@@ -38,6 +38,7 @@ dependencies:
 - raw-strings-qq
 - interpolate
 - mtl
+- regex-compat
 
 library:
   source-dirs: src

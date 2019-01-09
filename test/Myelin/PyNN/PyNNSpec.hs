@@ -9,6 +9,7 @@ import Data.ByteString.Lazy.Char8
 import Data.Either
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
+import Text.Regex as Regex
 
 import Myelin.Model
 import Myelin.Neuron
@@ -36,7 +37,8 @@ spec = do
       eval (pyNNNode pop) `shouldBe` Right expected 
     it "can translate an IF_exp_cond population to Python" $ do
       let tpe = if_cond_exp
-      let dict = unpack $ encode tpe
+      let dictWithType = unpack $ encode tpe
+      let dict = Regex.subRegex typeRegex dictWithType ""
       let pop = Population 2 tpe "p0" 0
       let expectedPopulation = "p0 = pynn.Population(2, pynn.IF_cond_exp(**" ++ dict ++ "))"
       let actualModel = exec (pyNNNode pop) 
@@ -115,7 +117,8 @@ spec = do
       let input = Population 2 if_cond_exp "p0" 0
       let hidden = Population 4 if_cond_exp "p1" 1
       let output = Population 3 if_cond_exp "p2" 2
-      let dict = unpack $ encode if_cond_exp
+      let dictWithType = unpack $ encode if_cond_exp
+      let dict = Regex.subRegex typeRegex dictWithType ""
       let effect1 = Static Excitatory (AllToAll (Constant 1))
       let effect2 = Static Excitatory (AllToAll (GaussianRandom 2 1))
       let edges = [ DenseProjection effect1 input hidden, DenseProjection effect2 hidden output ]

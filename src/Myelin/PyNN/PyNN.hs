@@ -15,6 +15,7 @@ import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.String.Interpolate
 import qualified Data.ByteString.Lazy.Char8 as BS
+import Text.Regex as Regex
 
 import Myelin.Model
 import Myelin.Neuron
@@ -100,12 +101,15 @@ pyNNPopulation tpe numNeurons id =
     Right codeString -> populationVariable id codeString
     Left errorString -> throwError errorString 
  
+typeRegex = Regex.mkRegex "\"type\":\"\\w*\","
+
 -- | Encodes a PyNN population as a string without state
 pyNNPopulationString :: NeuronType -> Integer -> Int -> Either String String
 pyNNPopulationString tpe numNeurons id =
   let params = BS.unpack $ encode tpe
+      stripType = Regex.subRegex typeRegex params ""
   in  case tpe of
-        IFCondExp { .. } -> Right $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_cond_exp(**" ++ params ++ "))"
+        IFCondExp { .. } -> Right $ "pynn.Population(" ++ (show numNeurons) ++ ", pynn.IF_cond_exp(**" ++ stripType ++ "))"
         _ -> Left $ "Unknown neuron type " ++ (show tpe)
 
 -- | Creates and stores an Edge as a PyNN projection
