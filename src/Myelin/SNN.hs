@@ -124,5 +124,7 @@ population label i typ visibility = do
 
 -- | Projects two 'Node's together by projecting the first node to the second
 -- node, as prescribed by the 'ProjectionEffect' 
-projection :: Monad m => ProjectionEffect -> Node -> Node -> SNN () m
-projection proj p0 p1 = edges <>= [DenseProjection proj p0 p1]
+projection :: Monad m => ProjectionEffect -> [Node] -> [Node] -> SNN () m
+projection proj [p0] [p1] = edges <>= [DenseProjection proj p0 p1]
+projection proj [p0, p1] [p2] = edges <>= [MergeProjection proj (p0, p1) p2]
+projection proj [p0] [p1, p2] = edges <>= [ReplicateProjection proj p0 (p1, p2)]
