@@ -7,6 +7,7 @@ module Myelin.Model where
 
 import Control.Lens hiding ((.=), (*~))
 import Data.Aeson
+import Numeric.LinearAlgebra
 
 import Myelin.Neuron
 
@@ -51,15 +52,24 @@ makePrisms ''Node
 type Delay = Float -- TODO: This is platform specific
 type Probability = Float -- TODO: Very unsophisticated representation
 
--- | Weight types that describes weights for a projection
-data Weights 
+data ParameterGenerator
   = Constant Float
-  | GaussianRandom 
+  | GaussianRandom
     { mean :: Float
     , scale :: Float
     }
-  -- TODO: Add matrix
-  -- | Matrix L
+  deriving (Eq, Show)
+
+-- | Biases that biases the output of a single projection
+data Biases
+  = BiasGenerator ParameterGenerator
+  | Biases [Float]
+  deriving (Eq, Show)
+
+-- | Weight types that describes weights for a projection
+data Weights 
+  = WeightGenerator ParameterGenerator
+  | Weights (Matrix Float)
   deriving (Eq, Show)
 
 makeLenses ''Weights
@@ -68,10 +78,12 @@ makePrisms ''Weights
 -- | Types of connections in a projection from one neuron population to another
 data ConnectionType
   = AllToAll
-    { _weights :: Weights
+    { _biases :: Biases
+    , _weights :: Weights
     }
   | OneToOne
-    { _weights :: Weights
+    { _biases :: Biases
+    , _weights :: Weights
     }
   deriving (Eq, Show)
 
