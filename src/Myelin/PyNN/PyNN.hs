@@ -57,7 +57,8 @@ translate (Task target network simulationTime) preample =
           in Right $ concat [preampleLines, populationLines, layerLines, declarationLines, training]
     where training = [i|
 optimiser = v.GradientDescentOptimiser(0.1, simulation_time=#{simulationTime})
-v.Main(model).train(optimiser)
+if __name__ == "__main__":
+    v.Main(model).train(optimiser)
 |]
  
 translate' :: Network -> PyNNState ()
@@ -67,9 +68,10 @@ translate' Network {..} = do
   outputStrings <- mapM pyNNNode _outputs
   _ <- mapM pyNNEdge _edges
   layers <- fmap _layers get
+  let decodeLayer = "l_decode = v.Decode(" ++ populationReference ((last $ _outputs) ^.id) ++ ")"
   let layersString = intercalate ", " $ Map.keys layers
-  let model = "model = v.Model(" ++ layersString ++ ")"
-  declarations <>= [model]
+  let model = "model = v.Model(" ++ layersString ++ ", l_decode)"
+  declarations <>= [decodeLayer, model]
 
 -- | The Python PyNN preamble for import statements
 pyNNPreample :: ExecutionTarget -> PyNNPreample -> String

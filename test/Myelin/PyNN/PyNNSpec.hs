@@ -98,21 +98,22 @@ spec = do
       let nodeOut2 = Population 4 if_cond_exp "p3" 3
       let edge1 = DenseProjection effect1 nodeIn1 nodeOut1
       let edge2 = DenseProjection effect2 nodeIn2 nodeOut2
-      let expectedDeclarations = ["model = v.Model(layer0, layer1)"]
+      let expectedDeclarations = ["l_decode = v.Decode(p3)", "model = v.Model(layer0, layer1, l_decode)"]
       let network = Network 0 [nodeIn1, nodeIn2] [] [edge1, edge2] [nodeOut1, nodeOut2]
       let model = exec (translate' network)
       model ^. declarations `shouldBe` expectedDeclarations
     it "can translate SNN nodes and edges to a PyNN model" $ do
-      let input = Population 2 if_cond_exp "p1" 0
-      let hidden = Population 4 if_cond_exp "p2" 1
-      let output = Population 3 if_cond_exp "p3" 2
+      let input = Population 2 if_cond_exp "p1" 1
+      let hidden = Population 4 if_cond_exp "p2" 2
+      let output = Population 3 if_cond_exp "p3" 3
       let effect = Static Excitatory (AllToAll (BiasGenerator (Constant 0)) (WeightGenerator (Constant 1)))
       let edges = [ DenseProjection effect input hidden, DenseProjection effect hidden output ]
       let network = Network 0 [input] [hidden] edges [output]
-      let expectedDeclarations = ["model = v.Model(layer0, layer1)"]
+      let expectedDeclarations = ["l_decode = v.Decode(p3)", "model = v.Model(layer0, layer1, l_decode)"]
       let model = exec (translate' network)
       model ^. declarations `shouldBe` expectedDeclarations
       Map.size (model ^. populations) `shouldBe` 3
+      Map.keys (model ^. populations) `shouldBe` ["p1", "p2", "p3"]
       Map.size (model ^. layers) `shouldBe` 2
     it "can translate SNN nodes and edges with given weights and biases to a PyNN model" $ do
       let input = Population 2 if_cond_exp "p1" 1
@@ -122,7 +123,7 @@ spec = do
       let effect = Static Excitatory (AllToAll biases weights)
       let edges = [ DenseProjection effect input output ]
       let network = Network 0 [input] [] edges [output]
-      let expectedDeclarations = ["model = v.Model(layer0)"]
+      let expectedDeclarations = ["l_decode = v.Decode(p2)", "model = v.Model(layer0, l_decode)"]
       let expectedLayer = "layer0 = v.Dense(p1, p2, weights=np.array([[1.0,2.0],[3.0,4.0],[5.0,6.0]]), biases=np.array([0.0,1.0,2.0]))"
       let model = exec (translate' network)
       model ^. declarations `shouldBe` expectedDeclarations
@@ -161,9 +162,11 @@ p1 = pynn.Population(4, pynn.IF_cond_exp(**#{dict}))
 p2 = pynn.Population(3, pynn.IF_cond_exp(**#{dict}))
 layer0 = v.Dense(p0, p1, weights=1.0, biases=0.0)
 layer1 = v.Dense(p1, p2, weights=np.random.normal(2.0, 1.0, (4, 3)), biases=np.array([0.0,1.1,2.2]))
-model = v.Model(layer0, layer1)
+l_decode = v.Decode(p2)
+model = v.Model(layer0, layer1, l_decode)
 
 optimiser = v.GradientDescentOptimiser(0.1, simulation_time=50.0)
-v.Main(model).train(optimiser)
+if __name__ == "__main__":
+    v.Main(model).train(optimiser)
 |]
       translate task preample `shouldBe` Right code
