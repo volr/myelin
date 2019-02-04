@@ -63,7 +63,7 @@ if __name__ == "__main__":
  
 translate' :: Network -> PyNNState ()
 translate' Network {..} = do
-  inputStrings <- mapM pyNNNode _inputs
+  _ <- mapM pyNNNode _inputs
   _ <- mapM pyNNNode _nodes
   outputStrings <- mapM pyNNNode _outputs
   _ <- mapM pyNNEdge _edges

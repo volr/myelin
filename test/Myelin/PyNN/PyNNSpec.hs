@@ -170,3 +170,53 @@ if __name__ == "__main__":
     v.Main(model).train(optimiser)
 |]
       translate task preample `shouldBe` Right code
+    it "can translate an parallel SNN model to a Python script" $ do
+      let input = Population 100 if_cond_exp "p0" 0
+      let h1 = Population 20 if_cond_exp "p1" 1
+      let h2 = Population 20 if_cond_exp "p2" 2
+      let h3 = Population 10 if_cond_exp "p3" 3
+      let h4 = Population 20 if_cond_exp "p4" 4
+      let h5 = Population 10 if_cond_exp "p5" 5
+      let h6 = Population 20 if_cond_exp "p6" 6
+      let output = Population 10 if_cond_exp "p7" 7
+      let dictWithType = unpack $ encode if_cond_exp
+      let dict = Regex.subRegex typeRegex dictWithType ""
+      let effect = Static Excitatory (AllToAll (BiasGenerator (Constant 0)) (WeightGenerator (Constant 1)))
+      let edges = [ DenseProjection effect input h1
+		  , ReplicateProjection effect h1 (h2, h4)
+		  , DenseProjection effect h2 h3
+		  , DenseProjection effect h4 h5
+		  , MergeProjection effect (h3, h5) h6
+		  , DenseProjection effect h6 output
+		  ]
+      let network = Network 0 [input] [h1, h2, h3, h4, h5, h6] edges [output]
+      let task = Task (Nest 0 0) network 50
+      let preample = PyNNPreample "# some config"
+      let code = [i|import numpy as np
+import volrpynn.nest as v
+import pyNN.nest as pynn
+
+# some config
+
+p0 = pynn.Population(100, pynn.IF_cond_exp(**#{dict}))
+p1 = pynn.Population(20, pynn.IF_cond_exp(**#{dict}))
+p2 = pynn.Population(20, pynn.IF_cond_exp(**#{dict}))
+p3 = pynn.Population(10, pynn.IF_cond_exp(**#{dict}))
+p4 = pynn.Population(20, pynn.IF_cond_exp(**#{dict}))
+p5 = pynn.Population(10, pynn.IF_cond_exp(**#{dict}))
+p6 = pynn.Population(20, pynn.IF_cond_exp(**#{dict}))
+p7 = pynn.Population(10, pynn.IF_cond_exp(**#{dict}))
+layer0 = v.Dense(p0, p1, weights=1.0, biases=0.0)
+layer1 = v.Replicate(p1, (p2, p4), weights=(1.0, 1.0), biases=0.0)
+layer2 = v.Dense(p2, p3, weights=1.0, biases=0.0)
+layer3 = v.Dense(p4, p5, weights=1.0, biases=0.0)
+layer4 = v.Merge((p3, p5), p6)
+layer5 = v.Dense(p6, p7, weights=1.0, biases=0.0)
+l_decode = v.Decode(p7)
+model = v.Model(layer0, layer1, layer2, layer3, layer4, layer5, l_decode)
+
+optimiser = v.GradientDescentOptimiser(0.1, simulation_time=50.0)
+if __name__ == "__main__":
+    v.Main(model).train(optimiser)
+|]
+      translate task preample `shouldBe` Right code
