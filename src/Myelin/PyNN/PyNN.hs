@@ -79,6 +79,7 @@ pyNNPreample target (PyNNPreample {..}) = let
  pyNNTarget = 
    case target of
       Nest { .. } -> "nest"
+      SpiNNaker -> "spiNNaker"
  in [i|import numpy as np
 import volrpynn.#{pyNNTarget} as v
 import pyNN.#{pyNNTarget} as pynn

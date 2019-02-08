@@ -47,7 +47,7 @@ data ExecutionTarget =
     -- | Spikey {
     --     _mappingOffset :: Int -- 0..192 (really only 0 and 192 are sensible)
     -- }
-    -- | SpiNNaker -- ^ SpiNNaker neuromorphic platform
+    | SpiNNaker -- ^ SpiNNaker neuromorphic platform
     -- | BrainScaleS2 -- ^ second generation brainscales system
     deriving (Eq, Show)
 
